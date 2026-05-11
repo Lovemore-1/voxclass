@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VoxClass — Judge Setup Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #ffffff;
+    color: #1a1a2e;
+    line-height: 1.6;
+    font-size: 14px;
+  }
+
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 48px 40px;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 24px;
+    border-bottom: 3px solid #CCFF00;
+    margin-bottom: 36px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 44px;
+    height: 44px;
+    background: #0A0A0F;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+
+  .logo-text h1 {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0A0A0F;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text p {
+    font-size: 11px;
+    color: #7C3AED;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .badge {
+    background: #0A0A0F;
+    color: #CCFF00;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Intro ── */
+  .intro {
+    background: #f8f9ff;
+    border-left: 4px solid #7C3AED;
+    border-radius: 0 8px 8px 0;
+    padding: 16px 20px;
+    margin-bottom: 36px;
+  }
+
+  .intro p {
+    color: #4a4a6a;
+    font-size: 13.5px;
+  }
+
+  .intro strong { color: #0A0A0F; }
+
+  /* ── Section headings ── */
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #0A0A0F;
+    margin-bottom: 16px;
+    margin-top: 32px;
+  }
+
+  .step-num {
+    width: 28px;
+    height: 28px;
+    background: #0A0A0F;
+    color: #CCFF00;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: #fafafa;
+    border: 1.5px solid #e8e8f0;
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+  }
+
+  .card-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .card-row:last-child { margin-bottom: 0; }
+
+  .card-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #7C3AED;
+    min-width: 80px;
+    padding-top: 1px;
+  }
+
+  .card-value {
+    font-size: 13.5px;
+    color: #1a1a2e;
+  }
+
+  /* ── Code blocks ── */
+  .code-block {
+    background: #0A0A0F;
+    color: #CCFF00;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin: 10px 0;
+    overflow-x: auto;
+  }
+
+  .code-block .comment { color: #555577; }
+  .code-block .key { color: #a78bfa; }
+
+  /* ── Steps list ── */
+  .steps {
+    list-style: none;
+    counter-reset: step-counter;
+  }
+
+  .steps li {
+    counter-increment: step-counter;
+    display: flex;
+    gap: 12px;
+    margin-bottom: 14px;
+    align-items: flex-start;
+  }
+
+  .steps li::before {
+    content: counter(step-counter);
+    min-width: 24px;
+    height: 24px;
+    background: #CCFF00;
+    color: #0A0A0F;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .steps li span { color: #1a1a2e; font-size: 13.5px; }
+  .steps li a { color: #7C3AED; text-decoration: none; font-weight: 600; }
+
+  /* ── URL pill ── */
+  .url-pill {
+    display: inline-block;
+    background: #f0ebff;
+    color: #7C3AED;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 4px;
+  }
+
+  /* ── Tip box ── */
+  .tip {
+    background: #fffbeb;
+    border: 1.5px solid #fcd34d;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #78450a;
+    margin-top: 10px;
+  }
+
+  .tip strong { color: #92400e; }
+
+  /* ── Divider ── */
+  hr {
+    border: none;
+    border-top: 1.5px solid #e8e8f0;
+    margin: 32px 0;
+  }
+
+  /* ── Flow diagram ── */
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+    margin: 20px 0;
+  }
+
+  .flow-item {
+    background: #0A0A0F;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 10px 16px;
+    border-radius: 8px;
+    text-align: center;
+    min-width: 110px;
+  }
+
+  .flow-item em {
+    display: block;
+    font-style: normal;
+    font-size: 18px;
+    margin-bottom: 4px;
+  }
+
+  .flow-arrow {
+    color: #CCFF00;
+    font-size: 20px;
+    padding: 0 6px;
+    font-weight: 700;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 2px solid #0A0A0F;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #888;
+  }
+
+  .footer strong { color: #0A0A0F; }
+
+  /* ── Print styles ── */
+  @media print {
+    body { font-size: 13px; }
+    .page { padding: 32px 32px; }
+    .section-title { margin-top: 24px; }
+    a { color: #7C3AED !important; }
+    @page { margin: 0.5cm; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">🎙️</div>
+      <div class="logo-text">
+        <h1>VoxClass</h1>
+        <p>Give your class a voice</p>
+      </div>
+    </div>
+    <div class="badge">Shortcut Asia 2026</div>
+  </div>
+
+  <!-- Intro -->
+  <div class="intro">
+    <p>This guide gets VoxClass running on your machine in under <strong>10 minutes</strong>. The app needs three things: <strong>Flutter</strong> (already on most dev machines), a <strong>Supabase</strong> project (free), and a <strong>Gemini API key</strong> (free). Everything else is already in the repo.</p>
+  </div>
+
+  <!-- Quick overview -->
+  <div class="flow">
+    <div class="flow-item"><em>📦</em>Get the code</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item"><em>🗄️</em>Set up Supabase</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item"><em>🤖</em>Get Gemini key</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item"><em>▶️</em>Run the app</div>
+  </div>
+
+  <hr/>
+
+  <!-- STEP 1 -->
+  <div class="section-title">
+    <div class="step-num">1</div>
+    Get the Code
+  </div>
+
+  <div class="card">
+    <div class="card-row">
+      <div class="card-label">Repo</div>
+      <div class="card-value"><span class="url-pill">github.com/munet/voxclass</span></div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">Requires</div>
+      <div class="card-value">Flutter SDK 3.x — verify with <code>flutter --version</code></div>
+    </div>
+  </div>
+
+  <div class="code-block">
+git clone https://github.com/munet/voxclass.git<br/>
+cd voxclass<br/>
+flutter pub get
+  </div>
+
+  <hr/>
+
+  <!-- STEP 2 -->
+  <div class="section-title">
+    <div class="step-num">2</div>
+    Create a Supabase Project (free)
+  </div>
+
+  <ol class="steps">
+    <li><span>Go to <a href="https://supabase.com">supabase.com</a> → <strong>New Project</strong> (takes ~1 min to provision)</span></li>
+    <li><span>In the left sidebar → <strong>SQL Editor</strong> → paste the entire contents of <strong>supabase/schema.sql</strong> from the repo → click <strong>Run</strong></span></li>
+    <li><span>Go to <strong>Table Editor</strong> → open each of these tables and enable <strong>Realtime</strong>: <code>reactions</code>, <code>ai_questions</code>, <code>slides</code></span></li>
+    <li><span>Go to <strong>Storage</strong> → <strong>New Bucket</strong> → name it <code>slides</code> → set to <strong>Public</strong></span></li>
+    <li><span>Go to <strong>Project Settings → API</strong> → copy your <strong>Project URL</strong> and <strong>anon public</strong> key</span></li>
+  </ol>
+
+  <hr/>
+
+  <!-- STEP 3 -->
+  <div class="section-title">
+    <div class="step-num">3</div>
+    Get a Gemini API Key (free)
+  </div>
+
+  <ol class="steps">
+    <li><span>Go to <a href="https://aistudio.google.com/apikey">aistudio.google.com/apikey</a></span></li>
+    <li><span>Click <strong>Create API Key</strong> → copy it</span></li>
+  </ol>
+
+  <hr/>
+
+  <!-- STEP 4 -->
+  <div class="section-title">
+    <div class="step-num">4</div>
+    Configure Environment
+  </div>
+
+  <p style="font-size:13.5px; color:#444; margin-bottom:10px;">In the project root, copy <code>.env.example</code> to <code>.env</code> and fill in your three keys:</p>
+
+  <div class="code-block">
+<span class="comment"># .env</span><br/>
+<span class="key">SUPABASE_URL</span>=https://your-project-id.supabase.co<br/>
+<span class="key">SUPABASE_ANON_KEY</span>=eyJ...<br/>
+<span class="key">GEMINI_API_KEY</span>=AIza...
+  </div>
+
+  <div class="tip">
+    <strong>Note:</strong> The <code>.env</code> file is gitignored and never committed — your keys stay private.
+  </div>
+
+  <hr/>
+
+  <!-- STEP 5 -->
+  <div class="section-title">
+    <div class="step-num">5</div>
+    Run the App
+  </div>
+
+  <div class="code-block">
+<span class="comment"># Recommended — runs in Chrome, zero extra setup</span><br/>
+flutter run -d chrome<br/>
+<br/>
+<span class="comment"># OR — Windows desktop app</span><br/>
+flutter run -d windows
+  </div>
+
+  <div class="tip">
+    <strong>Windows desktop only:</strong> Requires Developer Mode enabled.<br/>
+    Settings → System → For Developers → toggle Developer Mode ON.
+  </div>
+
+  <hr/>
+
+  <!-- STEP 6 — Test the flow -->
+  <div class="section-title">
+    <div class="step-num">6</div>
+    Test the Full Flow
+  </div>
+
+  <div class="card">
+    <div class="card-row">
+      <div class="card-label">Lecturer</div>
+      <div class="card-value">Sign up → choose <strong>Lecturer</strong> → Dashboard → <strong>Start Class</strong> → give a title → session starts with a live 6-digit code</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">Student</div>
+      <div class="card-value">Sign up → choose <strong>Student</strong> → Dashboard → <strong>Join Class</strong> → enter the 6-digit code → react live</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">AI Demo</div>
+      <div class="card-value">In the live session → Slides tab → upload any JPG → tap <strong>Ask Gemini</strong> → 3 quiz questions appear instantly</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">Polish Mode</div>
+      <div class="card-value">Dashboard → <strong>Polish Mode</strong> → paste any text → pick a style → see AI rewrite with word-level diff</div>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span><strong>VoxClass</strong> — Shortcut Asia Internship Challenge 2026</span>
+    <span>Flutter · Supabase · Gemini 1.5 Flash</span>
+  </div>
+
+</div>
+
+<script>
+  // Auto-trigger print dialog when opened with ?print=1
+  if (window.location.search.includes('print=1')) {
+    window.onload = () => window.print();
+  }
+</script>
+</body>
+</html>
