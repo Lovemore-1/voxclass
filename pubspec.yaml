@@ -1,0 +1,61 @@
+name: voxclass
+description: "Give your class a voice — real-time mood meter and AI-powered text polish."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Backend
+  supabase_flutter: ^2.5.9
+
+  # AI
+  google_generative_ai: ^0.4.6
+
+  # Navigation
+  go_router: ^14.6.2
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Charts & Data Viz
+  fl_chart: ^0.70.2
+
+  # QR Code generation
+  qr_flutter: ^4.1.0
+
+  # UI & Animations
+  google_fonts: ^6.2.1
+  flutter_animate: ^4.5.2
+  lottie: ^3.3.1
+  shimmer: ^3.0.0
+
+  # File handling
+  file_picker: ^8.1.7
+  image_picker: ^1.1.2
+  path_provider: ^2.1.5
+
+  # Utils
+  shared_preferences: ^2.3.4
+  flutter_dotenv: ^5.2.1
+  uuid: ^4.5.1
+  intl: ^0.20.1
+  permission_handler: ^11.3.1
+
+  # Icons
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
+    - assets/images/
