@@ -8,7 +8,7 @@
 
 ```bash
 # 1. Clone
-git clone https://github.com/lovemoremunetsi/voxclass.git
+git clone https://github.com/Lovemore-1/voxclass.git
 cd voxclass
 
 # 2. Install dependencies
