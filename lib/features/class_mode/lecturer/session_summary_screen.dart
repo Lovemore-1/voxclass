@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../providers/session_provider.dart';
 import '../../../services/gemini_service.dart';
+import '../widgets/comprehension_timeline_chart.dart';
 import '../widgets/mood_donut_chart.dart';
 
 class SessionSummaryScreen extends ConsumerStatefulWidget {
@@ -103,6 +104,11 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                 ).animate().fadeIn(delay: 150.ms),
                 const SizedBox(height: 12),
                 MoodLegend(green: green, yellow: yellow, red: red).animate().fadeIn(delay: 200.ms),
+                const SizedBox(height: 24),
+                ComprehensionTimelineChart(
+                  reactions: reactions,
+                  sessionStart: session.createdAt,
+                ).animate().fadeIn(delay: 220.ms),
                 const SizedBox(height: 28),
                 // AI Insight
                 if (_insight != null) ...[

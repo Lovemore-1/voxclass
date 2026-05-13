@@ -5,6 +5,7 @@ import '../models/session_model.dart';
 import '../models/reaction_model.dart';
 import '../models/slide_model.dart';
 import '../models/question_model.dart';
+import '../models/anon_question_model.dart';
 
 class SupabaseService {
   static final _client = Supabase.instance.client;
@@ -226,6 +227,57 @@ class SupabaseService {
       'student_name': studentName,
       'response_text': responseText,
     });
+  }
+
+  // ─── Anonymous Questions ──────────────────────────────────────────────────
+
+  static Future<void> submitAnonQuestion({
+    required String sessionId,
+    required String questionText,
+  }) async {
+    await _client.from('anonymous_questions').insert({
+      'session_id': sessionId,
+      'question_text': questionText,
+    });
+  }
+
+  static Stream<List<AnonQuestionModel>> anonQuestionsStream(String sessionId) {
+    return _client
+        .from('anonymous_questions')
+        .stream(primaryKey: ['id'])
+        .eq('session_id', sessionId)
+        .order('created_at', ascending: true)
+        .map((data) => data.map(AnonQuestionModel.fromJson).toList());
+  }
+
+  static Future<void> saveAndPushQuestion({
+    required String sessionId,
+    required String questionText,
+    required String sourceType,
+  }) async {
+    await _client.from('ai_questions').insert({
+      'session_id': sessionId,
+      'question_text': questionText,
+      'source_type': sourceType,
+      'is_pushed': true,
+    });
+  }
+
+  static Future<List<Map<String, dynamic>>> getSessionsSummary(
+      List<SessionModel> sessions) async {
+    final summaries = <Map<String, dynamic>>[];
+    for (final session in sessions.take(10)) {
+      final reactions = await getSessionReactions(session.id);
+      if (reactions.isEmpty) continue;
+      summaries.add({
+        'title': session.title,
+        'green': reactions.where((r) => r.isGreen).length,
+        'yellow': reactions.where((r) => r.isYellow).length,
+        'red': reactions.where((r) => r.isRed).length,
+        'total': reactions.length,
+      });
+    }
+    return summaries;
   }
 
   // ─── Polish logs ──────────────────────────────────────────────────────────

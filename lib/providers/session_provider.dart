@@ -3,6 +3,7 @@ import '../models/session_model.dart';
 import '../models/reaction_model.dart';
 import '../models/question_model.dart';
 import '../models/slide_model.dart';
+import '../models/anon_question_model.dart';
 import '../services/supabase_service.dart';
 import 'auth_provider.dart';
 
@@ -28,6 +29,12 @@ final questionsStreamProvider =
 final pushedQuestionsStreamProvider =
     StreamProvider.family<List<QuestionModel>, String>((ref, sessionId) {
   return SupabaseService.pushedQuestionsStream(sessionId);
+});
+
+// Anonymous questions stream
+final anonQuestionsStreamProvider =
+    StreamProvider.family<List<AnonQuestionModel>, String>((ref, sessionId) {
+  return SupabaseService.anonQuestionsStream(sessionId);
 });
 
 // Lecturer's session list

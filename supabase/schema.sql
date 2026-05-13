@@ -50,7 +50,7 @@ create table if not exists ai_questions (
   session_id    uuid references sessions(id) on delete cascade not null,
   slide_id      uuid references slides(id) on delete set null,
   question_text text not null,
-  source_type   text not null check (source_type in ('slide', 'confused', 'manual')),
+  source_type   text not null check (source_type in ('slide', 'confused', 'manual', 'reexplain')),
   is_pushed     boolean default false,
   created_at    timestamptz default now() not null
 );
@@ -71,6 +71,13 @@ create table if not exists polish_logs (
   output_text text not null,
   mode        text not null check (mode in ('soften', 'strengthen', 'academic', 'simplify')),
   created_at  timestamptz default now() not null
+);
+
+create table if not exists anonymous_questions (
+  id            uuid default uuid_generate_v4() primary key,
+  session_id    uuid references sessions(id) on delete cascade not null,
+  question_text text not null,
+  created_at    timestamptz default now() not null
 );
 
 -- ─── Trigger: auto-create profile on signup ──────────────────
@@ -94,6 +101,8 @@ create trigger on_auth_user_created
   for each row execute procedure handle_new_user();
 
 -- ─── Row Level Security ───────────────────────────────────────
+
+alter table anonymous_questions enable row level security;
 
 alter table profiles          enable row level security;
 alter table sessions          enable row level security;
@@ -134,6 +143,10 @@ create policy "questions_update" on ai_questions for update using (
 -- Question responses
 create policy "responses_select" on question_responses for select using (true);
 create policy "responses_insert" on question_responses for insert with check (auth.uid() is not null);
+
+-- Anonymous questions (allow any authenticated user to insert; all can read)
+create policy "anon_questions_select" on anonymous_questions for select using (true);
+create policy "anon_questions_insert" on anonymous_questions for insert with check (true);
 
 -- Polish logs
 create policy "polish_select" on polish_logs for select using (auth.uid() = user_id);

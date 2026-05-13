@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
+import '../../models/session_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/session_provider.dart';
+import '../../services/gemini_service.dart';
 import '../../services/supabase_service.dart';
 import 'widgets/stat_card.dart';
 import 'widgets/session_card.dart';
@@ -146,18 +148,46 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
-class _LecturerDashboard extends ConsumerWidget {
+class _LecturerDashboard extends ConsumerStatefulWidget {
   final AsyncValue<List> sessionsAsync;
 
   const _LecturerDashboard({required this.sessionsAsync});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return sessionsAsync.when(
+  ConsumerState<_LecturerDashboard> createState() => _LecturerDashboardState();
+}
+
+class _LecturerDashboardState extends ConsumerState<_LecturerDashboard> {
+  final _gemini = GeminiService();
+  bool _loadingDna = false;
+  String? _dnaInsight;
+
+  Future<void> _runSessionDna(List<SessionModel> sessions) async {
+    setState(() => _loadingDna = true);
+    try {
+      final summaries = await SupabaseService.getSessionsSummary(sessions);
+      if (summaries.isEmpty) {
+        setState(() => _dnaInsight =
+            'No reaction data found. Make sure students use reactions during sessions.');
+        return;
+      }
+      final insight = await _gemini.analyzeTeachingPatterns(summaries);
+      setState(() => _dnaInsight = insight);
+    } catch (e) {
+      setState(() => _dnaInsight = 'Analysis failed: $e');
+    } finally {
+      if (mounted) setState(() => _loadingDna = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.sessionsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator(color: AppColors.lime)),
       error: (_, __) => const Text('Could not load sessions'),
       data: (sessions) {
-        final active = sessions.where((s) => s.isActive).length;
+        final typed = sessions.cast<SessionModel>();
+        final active = typed.where((s) => s.isActive).length;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -184,7 +214,18 @@ class _LecturerDashboard extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 20),
+
+            // Session DNA card (3+ sessions)
+            if (typed.length >= 3) ...[
+              _DnaCard(
+                loading: _loadingDna,
+                insight: _dnaInsight,
+                onRun: () => _runSessionDna(typed),
+              ).animate().fadeIn(delay: 170.ms).slideY(begin: 0.2),
+              const SizedBox(height: 20),
+            ],
+
             // Polish CTA
             _FeatureCard(
               title: 'AI Text Polish',
@@ -217,16 +258,13 @@ class _LecturerDashboard extends ConsumerWidget {
                     const SizedBox(height: 12),
                     Text(
                       'No sessions yet',
-                      style: GoogleFonts.inter(
-                        color: AppColors.textMuted,
-                        fontSize: 14,
-                      ),
+                      style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14),
                     ),
                   ],
                 ),
               ).animate().fadeIn(delay: 300.ms)
             else
-              ...sessions.map(
+              ...typed.map(
                 (s) => SessionCard(
                   session: s,
                   onTap: () => s.isActive
@@ -237,6 +275,83 @@ class _LecturerDashboard extends ConsumerWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _DnaCard extends StatelessWidget {
+  final bool loading;
+  final String? insight;
+  final VoidCallback onRun;
+
+  const _DnaCard({required this.loading, required this.insight, required this.onRun});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.lime.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.lime.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('🧬', style: TextStyle(fontSize: 22)),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Session DNA',
+                      style: GoogleFonts.inter(
+                          fontSize: 15, fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary)),
+                  Text('AI pattern analysis across all your sessions',
+                      style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (insight != null) ...[
+            Text(insight!,
+                style: GoogleFonts.inter(
+                    fontSize: 13, color: AppColors.textSecondary, height: 1.55)),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: loading ? null : onRun,
+              icon: const Icon(Icons.refresh, size: 14),
+              label: const Text('Re-analyse'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.lime,
+                padding: EdgeInsets.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ] else
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: loading ? null : onRun,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.lime.withOpacity(0.12),
+                  foregroundColor: AppColors.lime,
+                  side: BorderSide(color: AppColors.lime.withOpacity(0.3)),
+                ),
+                icon: loading
+                    ? const SizedBox(
+                        height: 16, width: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: AppColors.lime))
+                    : const Icon(Icons.biotech_outlined, size: 16),
+                label: Text(loading ? 'Analysing patterns...' : 'Analyse My Teaching DNA'),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

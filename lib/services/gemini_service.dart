@@ -124,6 +124,72 @@ Return ONLY a JSON array of 3 strings, nothing else:
     }
   }
 
+  // ─── Anonymous Question Clustering ───────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> clusterAnonymousQuestions(
+      List<String> questions) async {
+    if (questions.isEmpty) return [];
+    final numbered =
+        questions.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n');
+    final prompt =
+        '''You have ${questions.length} anonymous questions from students in a live lecture:\n$numbered\n\nGroup these into 1-4 themes. For each theme return:\n- "theme": the common confusion (short phrase)\n- "count": number of questions in this theme\n- "sample": the clearest example question\n\nReturn ONLY a JSON array:\n[{"theme":"...","count":2,"sample":"..."}]''';
+    try {
+      final response = await _model.generateContent([Content.text(prompt)]);
+      final raw = response.text?.trim() ?? '[]';
+      final cleaned = raw.replaceAll('```json', '').replaceAll('```', '').trim();
+      return (jsonDecode(cleaned) as List).cast<Map<String, dynamic>>();
+    } catch (_) {
+      return [
+        {'theme': 'General questions from students', 'count': questions.length, 'sample': questions.first}
+      ];
+    }
+  }
+
+  // ─── Re-explain Generator ─────────────────────────────────────────────────
+
+  Future<List<Map<String, String>>> generateReexplanations({
+    required String topic,
+    String? subject,
+  }) async {
+    final ctx = subject != null ? '$topic ($subject)' : topic;
+    final prompt =
+        '''Students are confused about "$ctx" during a lecture.\n\nGenerate 3 re-explanations, each using a different style:\n1. "analogy" — a familiar real-world analogy\n2. "steps" — numbered step-by-step breakdown\n3. "example" — a concrete specific example\n\nReturn ONLY JSON:\n{"analogy":"...","steps":"...","example":"..."}''';
+    try {
+      final response = await _model.generateContent([Content.text(prompt)]);
+      final raw = response.text?.trim() ?? '{}';
+      final cleaned = raw.replaceAll('```json', '').replaceAll('```', '').trim();
+      final p = jsonDecode(cleaned) as Map<String, dynamic>;
+      return [
+        {'type': 'analogy', 'label': 'Analogy', 'text': p['analogy'] as String? ?? ''},
+        {'type': 'steps', 'label': 'Step by Step', 'text': p['steps'] as String? ?? ''},
+        {'type': 'example', 'label': 'Concrete Example', 'text': p['example'] as String? ?? ''},
+      ];
+    } catch (_) {
+      return [
+        {'type': 'analogy', 'label': 'Analogy', 'text': 'Think of it like a familiar process — each part connects to something you already know.'},
+        {'type': 'steps', 'label': 'Step by Step', 'text': 'Let\'s break this down one piece at a time, starting from the basics.'},
+        {'type': 'example', 'label': 'Concrete Example', 'text': 'Here\'s a real-world example that illustrates this concept directly.'},
+      ];
+    }
+  }
+
+  // ─── Session DNA (Teaching Pattern Analysis) ──────────────────────────────
+
+  Future<String> analyzeTeachingPatterns(
+      List<Map<String, dynamic>> sessionsData) async {
+    if (sessionsData.isEmpty) return 'No session data available yet.';
+    final lines = sessionsData.map((s) =>
+        'Session "${s['title']}": ${s['green']} understood, ${s['yellow']} unsure, ${s['red']} lost (${s['total']} total reactions)');
+    final prompt =
+        "Analyze classroom engagement across ${sessionsData.length} sessions:\n\n${lines.join('\n')}\n\nProvide 2-3 specific, actionable insights for the lecturer. Look for confusion patterns, trends, and what's working. Return ONLY the insight text — no bullet points, no headers, just 2-3 sentences.";
+    try {
+      final response = await _model.generateContent([Content.text(prompt)]);
+      return response.text?.trim() ?? 'Run more sessions to generate pattern insights.';
+    } catch (_) {
+      return 'Analysis unavailable. Ensure your Gemini API key is active.';
+    }
+  }
+
   // ─── Session Summary Insights ─────────────────────────────────────────────
 
   Future<String> generateSessionInsights({

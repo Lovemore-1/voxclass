@@ -23,13 +23,46 @@ class StudentSessionScreen extends ConsumerStatefulWidget {
 class _StudentSessionScreenState extends ConsumerState<StudentSessionScreen> {
   String? _currentReaction;
   bool _submitting = false;
+  bool _submittingQuestion = false;
   String? _studentName;
+  final _questionController = TextEditingController();
+
+  @override
+  void dispose() {
+    _questionController.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final uri = Uri.parse(GoRouterState.of(context).uri.toString());
     _studentName = uri.queryParameters['name'] ?? 'Anonymous';
+  }
+
+  Future<void> _submitAnonQuestion() async {
+    final text = _questionController.text.trim();
+    if (text.isEmpty) return;
+    setState(() => _submittingQuestion = true);
+    try {
+      await SupabaseService.submitAnonQuestion(
+        sessionId: widget.sessionId,
+        questionText: text,
+      );
+      _questionController.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Question sent anonymously!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _submittingQuestion = false);
+    }
   }
 
   Future<void> _react(String type) async {
@@ -207,6 +240,86 @@ class _StudentSessionScreenState extends ConsumerState<StudentSessionScreen> {
                     ],
                   ),
                 ).animate().fadeIn(),
+
+                // Anonymous question box
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.card,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text('💬', style: TextStyle(fontSize: 16)),
+                          const SizedBox(width: 8),
+                          Text('Ask anonymously',
+                              style: GoogleFonts.inter(
+                                  fontSize: 14, fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary)),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text('Your name is never shown to the lecturer',
+                          style: GoogleFonts.inter(
+                              fontSize: 11, color: AppColors.textMuted)),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _questionController,
+                              style: GoogleFonts.inter(
+                                  fontSize: 13, color: AppColors.textPrimary),
+                              decoration: InputDecoration(
+                                hintText: 'What are you confused about?',
+                                hintStyle: GoogleFonts.inter(
+                                    fontSize: 13, color: AppColors.textMuted),
+                                filled: true,
+                                fillColor: AppColors.darkBg,
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 10),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(color: AppColors.border),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(color: AppColors.border),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(color: AppColors.lime),
+                                ),
+                              ),
+                              maxLines: 2,
+                              textInputAction: TextInputAction.send,
+                              onSubmitted: (_) => _submitAnonQuestion(),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          ElevatedButton(
+                            onPressed: _submittingQuestion ? null : _submitAnonQuestion,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.all(12),
+                              minimumSize: const Size(44, 44),
+                            ),
+                            child: _submittingQuestion
+                                ? const SizedBox(
+                                    height: 16, width: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: AppColors.darkBg))
+                                : const Icon(Icons.send_outlined, size: 18),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ).animate().fadeIn(delay: 80.ms),
 
                 // Slides section
                 if (slides.isNotEmpty) ...[

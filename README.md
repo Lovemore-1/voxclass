@@ -1,6 +1,35 @@
 # VoxClass — Give Your Class a Voice
 
-> **Shortcut Asia Internship Challenge 2026** — Cross-platform Flutter app that makes every classroom smarter with real-time mood tracking, AI-generated questions, and instant student feedback.
+> **Shortcut Asia Internship Challenge 2026** — Real-time AI teaching co-pilot. Not just a reaction tool — VoxClass tells you the *story* of your lecture.
+
+---
+
+## ⚡ Quick Start (Run in 5 minutes)
+
+```bash
+# 1. Clone
+git clone https://github.com/lovemoremunetsi/voxclass.git
+cd voxclass
+
+# 2. Install dependencies
+flutter pub get
+
+# 3. Add your keys
+cp .env.example .env
+# Fill in .env with your Supabase + Gemini keys (see Setup section below)
+
+# 4. Run
+flutter run -d chrome
+```
+
+**Need keys?**
+- Supabase (free): [supabase.com](https://supabase.com) → New project → Settings → API
+- Gemini (free): [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+
+**Test the full flow:**
+1. Sign up as **Lecturer** → Start Class → copy the 6-digit code
+2. Open an incognito tab → sign up as **Student** → Join with the code
+3. Student sends reactions → Lecturer sees live mood + comprehension timeline
 
 ---
 
