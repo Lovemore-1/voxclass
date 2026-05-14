@@ -70,9 +70,9 @@ class QrDisplayWidget extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
-                color: AppColors.lime.withOpacity(0.1),
+                color: AppColors.lime.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.lime.withOpacity(0.3)),
+                border: Border.all(color: AppColors.lime.withValues(alpha: 0.3)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,

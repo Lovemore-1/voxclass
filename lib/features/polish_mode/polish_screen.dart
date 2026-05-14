@@ -99,9 +99,13 @@ class _PolishScreenState extends ConsumerState<PolishScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('AI Text Polish'),
+    return Container(
+      decoration: const BoxDecoration(gradient: AppColors.bgGradient),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          title: const Text('AI Text Polish'),
         actions: [
           if (_output != null) ...[
             IconButton(
@@ -140,7 +144,7 @@ class _PolishScreenState extends ConsumerState<PolishScreen> {
                       margin: const EdgeInsets.only(right: 10),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: selected ? AppColors.lime.withOpacity(0.1) : AppColors.card,
+                        color: selected ? AppColors.lime.withValues(alpha: 0.1) : AppColors.card,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: selected ? AppColors.lime : AppColors.border,
@@ -196,7 +200,7 @@ class _PolishScreenState extends ConsumerState<PolishScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.redBg,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.red.withOpacity(0.4)),
+                  border: Border.all(color: AppColors.red.withValues(alpha: 0.4)),
                 ),
                 child: Row(
                   children: [
@@ -241,6 +245,7 @@ class _PolishScreenState extends ConsumerState<PolishScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -276,9 +281,9 @@ class _ModeDescCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.purple.withOpacity(0.06),
+        color: AppColors.purple.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.purple.withOpacity(0.2)),
+        border: Border.all(color: AppColors.purple.withValues(alpha: 0.2)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,9 +345,9 @@ class _OutputSection extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.lime.withOpacity(0.04),
+            color: AppColors.lime.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.lime.withOpacity(0.25)),
+            border: Border.all(color: AppColors.lime.withValues(alpha: 0.25)),
           ),
           child: SelectableText(
             polished,
@@ -389,7 +394,7 @@ class _DiffView extends StatelessWidget {
         spans.add(TextSpan(
           text: '$word ',
           style: const TextStyle(
-            backgroundColor: Color(0x33CCFF00),
+            backgroundColor: Color(0x336366F1),
             color: AppColors.lime,
             fontWeight: FontWeight.w600,
           ),
@@ -460,7 +465,7 @@ class _Legend extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 10, height: 10, color: color.withOpacity(0.6)),
+        Container(width: 10, height: 10, color: color.withValues(alpha: 0.6)),
         const SizedBox(width: 4),
         Text(label,
             style: GoogleFonts.inter(

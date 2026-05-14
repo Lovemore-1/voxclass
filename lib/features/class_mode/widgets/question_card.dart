@@ -32,7 +32,7 @@ class QuestionCard extends StatelessWidget {
         color: AppColors.card,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: question.isPushed ? _sourceColor.withOpacity(0.4) : AppColors.border,
+          color: question.isPushed ? _sourceColor.withValues(alpha: 0.4) : AppColors.border,
         ),
       ),
       child: Column(
@@ -43,7 +43,7 @@ class QuestionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: _sourceColor.withOpacity(0.1),
+                  color: _sourceColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -60,7 +60,7 @@ class QuestionCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.green.withOpacity(0.1),
+                    color: AppColors.green.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(

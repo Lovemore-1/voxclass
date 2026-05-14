@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../features/home/home_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/signup_screen.dart';
@@ -19,21 +20,25 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(notifier.dispose);
 
   return GoRouter(
-    initialLocation: '/onboarding',
+    initialLocation: '/home',
     refreshListenable: notifier,
     redirect: (context, state) {
       final user = Supabase.instance.client.auth.currentUser;
       final isAuthenticated = user != null;
       final loc = state.matchedLocation;
 
-      const publicRoutes = ['/onboarding', '/login', '/signup'];
+      const publicRoutes = ['/home', '/onboarding', '/login', '/signup'];
       final isPublic = publicRoutes.contains(loc);
 
-      if (!isAuthenticated && !isPublic) return '/login';
+      if (!isAuthenticated && !isPublic) return '/home';
       if (isAuthenticated && isPublic) return '/dashboard';
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/home',
+        pageBuilder: (_, state) => _fadePage(state, const HomeScreen()),
+      ),
       GoRoute(
         path: '/onboarding',
         pageBuilder: (_, state) => _fadePage(state, const OnboardingScreen()),

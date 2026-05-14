@@ -55,15 +55,19 @@ class _CreateSessionScreenState extends ConsumerState<CreateSessionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/dashboard'),
+    return Container(
+      decoration: const BoxDecoration(gradient: AppColors.bgGradient),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.go('/dashboard'),
+          ),
+          title: const Text('New Class Session'),
         ),
-        title: const Text('New Class Session'),
-      ),
-      body: SafeArea(
+        body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: _createdSession == null
@@ -80,6 +84,7 @@ class _CreateSessionScreenState extends ConsumerState<CreateSessionScreen> {
                 ),
         ),
       ),
+    ),
     );
   }
 }

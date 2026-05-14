@@ -62,7 +62,7 @@ class _ReactionButtonState extends State<ReactionButton>
           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
           decoration: BoxDecoration(
             color: widget.selected
-                ? widget.color.withOpacity(0.15)
+                ? widget.color.withValues(alpha: 0.15)
                 : AppColors.card,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(

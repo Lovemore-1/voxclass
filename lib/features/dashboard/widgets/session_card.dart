@@ -30,7 +30,7 @@ class SessionCard extends StatelessWidget {
               height: 44,
               decoration: BoxDecoration(
                 color: session.isActive
-                    ? AppColors.lime.withOpacity(0.1)
+                    ? AppColors.lime.withValues(alpha: 0.1)
                     : AppColors.border,
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -68,7 +68,7 @@ class SessionCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: session.isActive
-                    ? AppColors.green.withOpacity(0.1)
+                    ? AppColors.green.withValues(alpha: 0.1)
                     : AppColors.border,
                 borderRadius: BorderRadius.circular(6),
               ),

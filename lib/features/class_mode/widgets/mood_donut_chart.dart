@@ -55,8 +55,8 @@ class MoodDonutChart extends StatelessWidget {
                   ),
               ],
             ),
-            swapAnimationDuration: const Duration(milliseconds: 600),
-            swapAnimationCurve: Curves.easeInOut,
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeInOut,
           ),
           Column(
             mainAxisSize: MainAxisSize.min,

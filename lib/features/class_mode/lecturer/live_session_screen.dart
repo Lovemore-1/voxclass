@@ -262,9 +262,13 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
         final red = reactions.where((r) => r.isRed).length;
         final anonQuestions = anonQAsync.asData?.value ?? [];
 
-        return Scaffold(
-          appBar: AppBar(
-            leading: const BackButton(),
+        return Container(
+          decoration: const BoxDecoration(gradient: AppColors.bgGradient),
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              leading: const BackButton(),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -345,6 +349,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
               ),
             ],
           ),
+        ),
         );
       },
     );
@@ -366,23 +371,58 @@ class _MoodTab extends StatelessWidget {
     required this.sessionStart,
   });
 
+  String _elapsed() {
+    final mins = DateTime.now().difference(sessionStart).inMinutes;
+    if (mins < 60) return '${mins}m';
+    return '${mins ~/ 60}h ${mins % 60}m';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final total = green + yellow + red;
+    final uniqueStudents = reactions.map((r) => r.studentId ?? r.studentName).toSet().length;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          SizedBox(
-            height: 260,
-            child: MoodDonutChart(green: green, yellow: yellow, red: red),
+          // ── 3 Stat Cards ──
+          Row(
+            children: [
+              _StatCard(label: 'Code', value: code, icon: Icons.tag_outlined),
+              const SizedBox(width: 10),
+              _StatCard(
+                  label: 'Students',
+                  value: '$uniqueStudents',
+                  icon: Icons.people_outline),
+              const SizedBox(width: 10),
+              _StatCard(
+                  label: 'Time',
+                  value: _elapsed(),
+                  icon: Icons.timer_outlined),
+            ],
           ).animate().fadeIn(),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
+
+          // ── Donut ──
+          SizedBox(
+            height: 240,
+            child: MoodDonutChart(green: green, yellow: yellow, red: red),
+          ).animate().fadeIn(delay: 80.ms),
+          const SizedBox(height: 12),
           MoodLegend(green: green, yellow: yellow, red: red),
+
+          if (total > 0) ...[
+            const SizedBox(height: 8),
+            Text('$total reaction${total == 1 ? '' : 's'} received',
+                style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+          ],
+
           const SizedBox(height: 24),
           ComprehensionTimelineChart(
             reactions: reactions,
             sessionStart: sessionStart,
-          ).animate().fadeIn(delay: 100.ms),
+          ).animate().fadeIn(delay: 140.ms),
           const SizedBox(height: 24),
           QrDisplayWidget(code: code, sessionTitle: sessionTitle),
           const SizedBox(height: 24),
@@ -391,12 +431,54 @@ class _MoodTab extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text('Recent Reactions',
                   style: GoogleFonts.inter(
-                      fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
+                      fontSize: 13, fontWeight: FontWeight.w600,
+                      color: AppColors.textMuted)),
             ),
             const SizedBox(height: 8),
             ...reactions.take(8).map((r) => _ReactionRow(reaction: r)),
           ],
+          const SizedBox(height: 20),
         ],
+      ),
+    );
+  }
+}
+
+// ── Stat Card ─────────────────────────────────────────────────────────────────
+
+class _StatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  const _StatCard({required this.label, required this.value, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: AppColors.indigo),
+            const SizedBox(height: 6),
+            Text(value,
+                style: GoogleFonts.inter(
+                    fontSize: 16, fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary, letterSpacing: 1),
+                overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 2),
+            Text(label,
+                style: GoogleFonts.inter(
+                    fontSize: 10, color: AppColors.textMuted,
+                    fontWeight: FontWeight.w500)),
+          ],
+        ),
       ),
     );
   }
@@ -631,7 +713,7 @@ class _SignalsTab extends StatelessWidget {
               color: redCount > 0 ? AppColors.redBg : AppColors.card,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: redCount > 0 ? AppColors.red.withOpacity(0.4) : AppColors.border,
+                color: redCount > 0 ? AppColors.red.withValues(alpha: 0.4) : AppColors.border,
               ),
             ),
             child: Row(
@@ -686,9 +768,9 @@ class _SignalsTab extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: generatingReexplain ? null : onReexplain,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.purple.withOpacity(0.15),
+                backgroundColor: AppColors.purple.withValues(alpha: 0.15),
                 foregroundColor: AppColors.purpleLight,
-                side: BorderSide(color: AppColors.purple.withOpacity(0.4)),
+                side: BorderSide(color: AppColors.purple.withValues(alpha: 0.4)),
               ),
               icon: generatingReexplain
                   ? const SizedBox(
@@ -713,7 +795,7 @@ class _SignalsTab extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.redBg,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.red.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -739,7 +821,7 @@ class _SignalsTab extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.lime.withOpacity(0.12),
+                  color: AppColors.lime.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text('${anonQuestions.length}',
@@ -830,9 +912,9 @@ class _ClusterCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.lime.withOpacity(0.04),
+        color: AppColors.lime.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.lime.withOpacity(0.2)),
+        border: Border.all(color: AppColors.lime.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -850,7 +932,7 @@ class _ClusterCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.lime.withOpacity(0.15),
+                  color: AppColors.lime.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text('$count students',

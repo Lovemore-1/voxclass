@@ -20,8 +20,11 @@ class DashboardScreen extends ConsumerWidget {
     final profileAsync = ref.watch(profileProvider);
     final sessionsAsync = ref.watch(lecturerSessionsProvider);
 
-    return Scaffold(
-      body: profileAsync.when(
+    return Container(
+      decoration: const BoxDecoration(gradient: AppColors.bgGradient),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: profileAsync.when(
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppColors.lime),
         ),
@@ -104,8 +107,8 @@ class DashboardScreen extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: profile.isLecturer
-                              ? AppColors.purple.withOpacity(0.15)
-                              : AppColors.lime.withOpacity(0.1),
+                              ? AppColors.purple.withValues(alpha: 0.15)
+                              : AppColors.lime.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -144,6 +147,7 @@ class DashboardScreen extends ConsumerWidget {
             : null,
         orElse: () => null,
       ),
+    ),
     );
   }
 }
@@ -291,9 +295,9 @@ class _DnaCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.lime.withOpacity(0.04),
+        color: AppColors.lime.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.lime.withOpacity(0.2)),
+        border: Border.all(color: AppColors.lime.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,9 +341,9 @@ class _DnaCard extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: loading ? null : onRun,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.lime.withOpacity(0.12),
+                  backgroundColor: AppColors.lime.withValues(alpha: 0.12),
                   foregroundColor: AppColors.lime,
-                  side: BorderSide(color: AppColors.lime.withOpacity(0.3)),
+                  side: BorderSide(color: AppColors.lime.withValues(alpha: 0.3)),
                 ),
                 icon: loading
                     ? const SizedBox(
@@ -428,9 +432,9 @@ class _FeatureCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.05),
+          color: color.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.25), width: 1),
+          border: Border.all(color: color.withValues(alpha: 0.25), width: 1),
         ),
         child: Row(
           children: [
@@ -438,7 +442,7 @@ class _FeatureCard extends StatelessWidget {
               width: 52,
               height: 52,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Center(child: Text(emoji, style: const TextStyle(fontSize: 26))),

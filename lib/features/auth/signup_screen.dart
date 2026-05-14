@@ -44,7 +44,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       );
       if (mounted) context.go('/dashboard');
     } catch (e) {
-      setState(() => _error = 'Sign up failed. Email may already be in use.');
+      setState(() => _error = e.toString().replaceFirst('AuthException: ', '').replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -52,10 +52,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+    return Container(
+      decoration: const BoxDecoration(gradient: AppColors.bgGradient),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -161,7 +164,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.redBg,
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.red.withOpacity(0.4)),
+                          border: Border.all(color: AppColors.red.withValues(alpha: 0.4)),
                         ),
                         child: Row(
                           children: [
@@ -213,6 +216,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }
@@ -238,7 +242,7 @@ class _RoleCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 20),
         decoration: BoxDecoration(
-          color: selected ? AppColors.lime.withOpacity(0.1) : AppColors.card,
+          color: selected ? AppColors.lime.withValues(alpha: 0.1) : AppColors.card,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: selected ? AppColors.lime : AppColors.border,

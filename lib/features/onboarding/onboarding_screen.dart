@@ -174,9 +174,9 @@ class _OnboardingPage extends StatelessWidget {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: accentColor.withOpacity(0.1),
+              color: accentColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: accentColor.withOpacity(0.3), width: 1),
+              border: Border.all(color: accentColor.withValues(alpha: 0.3), width: 1),
             ),
             child: Center(
               child: Text(emoji, style: const TextStyle(fontSize: 56)),

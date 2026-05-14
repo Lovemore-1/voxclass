@@ -14,20 +14,17 @@ class ComprehensionTimelineChart extends StatelessWidget {
     required this.sessionStart,
   });
 
-  List<List<FlSpot>> _buildSpots() {
-    if (reactions.length < 3) return [[], [], []];
+  List<FlSpot> _buildConfusionSpots() {
+    if (reactions.length < 3) return [];
 
     final sorted = [...reactions]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
     final totalMinutes = sorted.last.createdAt.difference(sessionStart).inMinutes + 1;
-    if (totalMinutes < 1) return [[], [], []];
+    if (totalMinutes < 1) return [];
 
     final bucketSize = totalMinutes <= 6 ? 1 : 2;
     final numBuckets = (totalMinutes / bucketSize).ceil().clamp(2, 40);
 
-    final green = <FlSpot>[];
-    final yellow = <FlSpot>[];
-    final red = <FlSpot>[];
-
+    final spots = <FlSpot>[];
     for (int i = 0; i < numBuckets; i++) {
       final start = sessionStart.add(Duration(minutes: i * bucketSize));
       final end = sessionStart.add(Duration(minutes: (i + 1) * bucketSize));
@@ -35,75 +32,37 @@ class ComprehensionTimelineChart extends StatelessWidget {
           .where((r) => !r.createdAt.isBefore(start) && r.createdAt.isBefore(end))
           .toList();
       if (inBucket.isEmpty) continue;
-
       final total = inBucket.length.toDouble();
+      final confusedCount = inBucket.where((r) => r.isRed).length;
       final x = (i * bucketSize).toDouble();
-      green.add(FlSpot(x, inBucket.where((r) => r.isGreen).length / total * 100));
-      yellow.add(FlSpot(x, inBucket.where((r) => r.isYellow).length / total * 100));
-      red.add(FlSpot(x, inBucket.where((r) => r.isRed).length / total * 100));
+      spots.add(FlSpot(x, confusedCount / total * 100));
     }
 
-    if (green.length < 2 && yellow.length < 2 && red.length < 2) return [[], [], []];
-    return [green, yellow, red];
+    return spots.length >= 2 ? spots : [];
   }
 
   @override
   Widget build(BuildContext context) {
-    final spots = _buildSpots();
-    final greenSpots = spots[0];
-    final yellowSpots = spots[1];
-    final redSpots = spots[2];
+    final spots = _buildConfusionSpots();
 
-    if (greenSpots.isEmpty && yellowSpots.isEmpty && redSpots.isEmpty) {
+    if (spots.isEmpty) {
       return Container(
         height: 90,
         decoration: BoxDecoration(
           color: AppColors.card,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.border),
         ),
         child: Center(
           child: Text(
-            '📈  Timeline builds as reactions come in',
+            '📈  Confusion timeline builds as students react',
             style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
           ),
         ),
       );
     }
 
-    final allX = [...greenSpots, ...yellowSpots, ...redSpots].map((s) => s.x);
-    final maxX = allX.reduce((a, b) => a > b ? a : b) + 1;
-
-    final bars = <LineChartBarData>[
-      if (greenSpots.length >= 2)
-        LineChartBarData(
-          spots: greenSpots,
-          color: AppColors.green,
-          isCurved: true,
-          barWidth: 2.5,
-          dotData: const FlDotData(show: false),
-          belowBarData: BarAreaData(show: true, color: AppColors.green.withOpacity(0.08)),
-        ),
-      if (yellowSpots.length >= 2)
-        LineChartBarData(
-          spots: yellowSpots,
-          color: AppColors.amber,
-          isCurved: true,
-          barWidth: 2.5,
-          dotData: const FlDotData(show: false),
-          belowBarData: BarAreaData(show: true, color: AppColors.amber.withOpacity(0.08)),
-        ),
-      if (redSpots.length >= 2)
-        LineChartBarData(
-          spots: redSpots,
-          color: AppColors.red,
-          isCurved: true,
-          barWidth: 2.5,
-          dotData: const FlDotData(show: false),
-          belowBarData: BarAreaData(show: true, color: AppColors.red.withOpacity(0.08)),
-        ),
-    ];
-
+    final maxX = spots.last.x + 1;
     final xInterval = maxX <= 10 ? 2.0 : (maxX / 5).ceilToDouble();
 
     return Column(
@@ -111,15 +70,16 @@ class ComprehensionTimelineChart extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text('Comprehension Timeline',
+            Container(
+              width: 8, height: 8,
+              decoration: const BoxDecoration(
+                color: AppColors.red, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 6),
+            Text('Confusion Timeline',
                 style: GoogleFonts.inter(
-                    fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
-            const Spacer(),
-            _Dot(color: AppColors.green, label: 'Got it'),
-            const SizedBox(width: 10),
-            _Dot(color: AppColors.amber, label: 'Unsure'),
-            const SizedBox(width: 10),
-            _Dot(color: AppColors.red, label: 'Lost'),
+                    fontSize: 13, fontWeight: FontWeight.w600,
+                    color: AppColors.textMuted)),
           ],
         ),
         const SizedBox(height: 10),
@@ -128,12 +88,31 @@ class ComprehensionTimelineChart extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(4, 12, 12, 4),
           decoration: BoxDecoration(
             color: AppColors.card,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.border),
           ),
           child: LineChart(
             LineChartData(
-              lineBarsData: bars,
+              lineBarsData: [
+                LineChartBarData(
+                  spots: spots,
+                  color: AppColors.red,
+                  isCurved: true,
+                  barWidth: 2.5,
+                  dotData: const FlDotData(show: false),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppColors.red.withValues(alpha: 0.18),
+                        AppColors.red.withValues(alpha: 0.0),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               minX: 0,
               maxX: maxX,
               minY: 0,
@@ -147,15 +126,18 @@ class ComprehensionTimelineChart extends StatelessWidget {
               ),
               borderData: FlBorderData(show: false),
               titlesData: FlTitlesData(
-                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false)),
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
                     reservedSize: 20,
                     interval: xInterval,
                     getTitlesWidget: (v, _) => Text('${v.toInt()}m',
-                        style: GoogleFonts.inter(fontSize: 9, color: AppColors.textMuted)),
+                        style: GoogleFonts.inter(
+                            fontSize: 9, color: AppColors.textMuted)),
                   ),
                 ),
                 leftTitles: AxisTitles(
@@ -164,19 +146,21 @@ class ComprehensionTimelineChart extends StatelessWidget {
                     reservedSize: 28,
                     interval: 50,
                     getTitlesWidget: (v, _) => Text('${v.toInt()}%',
-                        style: GoogleFonts.inter(fontSize: 9, color: AppColors.textMuted)),
+                        style: GoogleFonts.inter(
+                            fontSize: 9, color: AppColors.textMuted)),
                   ),
                 ),
               ),
               lineTouchData: LineTouchData(
                 touchTooltipData: LineTouchTooltipData(
                   getTooltipColor: (_) => AppColors.cardElevated,
-                  getTooltipItems: (spots) => spots
+                  tooltipRoundedRadius: 10,
+                  getTooltipItems: (touchedSpots) => touchedSpots
                       .map((s) => LineTooltipItem(
-                            '${s.y.toStringAsFixed(0)}%',
+                            'confusion: ${s.y.toStringAsFixed(0)}%',
                             GoogleFonts.inter(
                               fontSize: 11,
-                              color: s.bar.color ?? AppColors.lime,
+                              color: AppColors.red,
                               fontWeight: FontWeight.w600,
                             ),
                           ))
@@ -186,24 +170,6 @@ class ComprehensionTimelineChart extends StatelessWidget {
             ),
           ),
         ),
-      ],
-    );
-  }
-}
-
-class _Dot extends StatelessWidget {
-  final Color color;
-  final String label;
-  const _Dot({required this.color, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(width: 12, height: 3, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
-        const SizedBox(width: 4),
-        Text(label, style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
       ],
     );
   }

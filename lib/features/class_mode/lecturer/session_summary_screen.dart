@@ -42,15 +42,19 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
     final reactionsAsync = ref.watch(reactionsStreamProvider(widget.sessionId));
     final questionsAsync = ref.watch(questionsStreamProvider(widget.sessionId));
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/dashboard'),
+    return Container(
+      decoration: const BoxDecoration(gradient: AppColors.bgGradient),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.go('/dashboard'),
+          ),
+          title: const Text('Session Summary'),
         ),
-        title: const Text('Session Summary'),
-      ),
-      body: sessionAsync.when(
+        body: sessionAsync.when(
         loading: () => const Center(child: CircularProgressIndicator(color: AppColors.lime)),
         error: (_, __) => const Center(child: Text('Session not found')),
         data: (session) {
@@ -163,6 +167,7 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
           );
         },
       ),
+    ),
     );
   }
 }
@@ -192,7 +197,7 @@ class _SummaryStatCard extends StatelessWidget {
           Container(
             width: 40, height: 40,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+              color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
             child: Icon(icon, color: color, size: 18),
           ),
           const SizedBox(width: 12),
@@ -221,9 +226,9 @@ class _InsightCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.lime.withOpacity(0.05),
+        color: AppColors.lime.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.lime.withOpacity(0.25)),
+        border: Border.all(color: AppColors.lime.withValues(alpha: 0.25)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
