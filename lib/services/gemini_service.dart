@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../core/constants.dart';
 
@@ -26,6 +27,26 @@ class GeminiService {
     );
   }
 
+  // ─── Retry helper ─────────────────────────────────────────────────────────
+  // Retries up to [maxAttempts] times with exponential backoff.
+  // Rethrows on final failure so callers can fall back to safe defaults.
+
+  Future<T> _withRetry<T>(
+    Future<T> Function() fn, {
+    int maxAttempts = 3,
+  }) async {
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await fn();
+      } catch (e) {
+        if (attempt == maxAttempts) rethrow;
+        // 500ms, 1000ms, 1500ms …
+        await Future.delayed(Duration(milliseconds: 500 * attempt));
+      }
+    }
+    throw Exception('Max retries exceeded');
+  }
+
   // ─── Polish Mode ──────────────────────────────────────────────────────────
 
   Future<String> polishText({
@@ -33,8 +54,14 @@ class GeminiService {
     required String mode,
   }) async {
     final prompt = _polishPrompt(text, mode);
-    final response = await _model.generateContent([Content.text(prompt)]);
-    return response.text?.trim() ?? text;
+    try {
+      return await _withRetry(() async {
+        final response = await _model.generateContent([Content.text(prompt)]);
+        return response.text?.trim() ?? text;
+      });
+    } catch (_) {
+      return text;
+    }
   }
 
   String _polishPrompt(String text, String mode) {
@@ -62,29 +89,71 @@ $text''';
 
   // ─── Slide Questions ──────────────────────────────────────────────────────
 
-  Future<List<String>> generateQuestionsFromImage(Uint8List imageBytes) async {
-    const prompt = '''You are an educational AI assistant helping a lecturer engage students.
-Analyze this slide image and generate exactly 3 thought-provoking quiz questions to check student understanding of the content shown.
+  Future<List<String>> generateQuestionsFromImage(
+    Uint8List imageBytes, {
+    String mimeType = 'image/jpeg',
+  }) async {
+    const prompt =
+        '''You are an educational AI assistant helping a lecturer engage students.
+Analyze this slide (which may be an image or a PDF document) and generate exactly 3 thought-provoking quiz questions to check student understanding of the content shown.
 Return ONLY a JSON array of 3 strings, nothing else. Example format:
 ["Question 1?", "Question 2?", "Question 3?"]''';
 
     try {
-      final response = await _visionModel.generateContent([
-        Content.multi([
-          TextPart(prompt),
-          DataPart('image/jpeg', imageBytes),
-        ])
-      ]);
-
-      final raw = response.text?.trim() ?? '[]';
-      final cleaned = raw.replaceAll('```json', '').replaceAll('```', '').trim();
-      final parsed = jsonDecode(cleaned) as List;
-      return parsed.cast<String>();
-    } catch (e) {
+      return await _withRetry(() async {
+        final response = await _visionModel.generateContent([
+          Content.multi([
+            TextPart(prompt),
+            DataPart(mimeType, imageBytes),
+          ])
+        ]);
+        final raw = response.text?.trim() ?? '[]';
+        final cleaned =
+            raw.replaceAll('```json', '').replaceAll('```', '').trim();
+        final parsed = jsonDecode(cleaned) as List;
+        return parsed.cast<String>();
+      });
+    } catch (_) {
       return [
         'What are the key concepts presented in this slide?',
         'How does this content relate to real-world applications?',
         'What questions do you have about this material?',
+      ];
+    }
+  }
+
+  // ─── Topic-based Questions (text-only, for PPTX / non-image slides) ─────────
+
+  Future<List<String>> generateQuestionsForTopic({
+    required String sessionTitle,
+    String? subject,
+    String? context,
+  }) async {
+    final topic = subject != null ? '$sessionTitle ($subject)' : sessionTitle;
+    final extra = (context != null && context != sessionTitle)
+        ? ' The slide or material is titled "$context".'
+        : '';
+    final prompt =
+        '''You are an educational AI assistant helping a lecturer engage students.
+Generate exactly 3 thought-provoking quiz questions for a lecture on "$topic".$extra
+Questions should check student understanding and encourage critical thinking.
+Return ONLY a JSON array of 3 strings, nothing else. Example format:
+["Question 1?", "Question 2?", "Question 3?"]''';
+
+    try {
+      return await _withRetry(() async {
+        final response = await _model.generateContent([Content.text(prompt)]);
+        final raw = response.text?.trim() ?? '[]';
+        final cleaned =
+            raw.replaceAll('```json', '').replaceAll('```', '').trim();
+        final parsed = jsonDecode(cleaned) as List;
+        return parsed.cast<String>();
+      });
+    } catch (_) {
+      return [
+        'What are the key concepts covered so far?',
+        'How would you apply this material in a real-world scenario?',
+        'What questions do you still have about this topic?',
       ];
     }
   }
@@ -96,9 +165,14 @@ Return ONLY a JSON array of 3 strings, nothing else. Example format:
     required String? subject,
     required int confusedCount,
     required int totalStudents,
+    Uint8List? slideBytes,
+    String? slideMimeType,
   }) async {
-    final topic = subject != null ? '$sessionTitle ($subject)' : sessionTitle;
-    final prompt = '''$confusedCount out of $totalStudents students have indicated they are confused or lost during a lecture on "$topic".
+    final topic =
+        subject != null ? '$sessionTitle ($subject)' : sessionTitle;
+    final prompt =
+        '''$confusedCount out of $totalStudents students have indicated they are confused or lost during a lecture on "$topic".
+${slideBytes != null ? 'The current slide is shown in the attached image — base your questions specifically on its content.' : ''}
 
 Generate exactly 3 targeted clarifying questions that a lecturer should ask the class to:
 1. Identify specific gaps in understanding
@@ -110,12 +184,18 @@ Return ONLY a JSON array of 3 strings, nothing else:
 ["Question 1?", "Question 2?", "Question 3?"]''';
 
     try {
-      final response = await _model.generateContent([Content.text(prompt)]);
-      final raw = response.text?.trim() ?? '[]';
-      final cleaned = raw.replaceAll('```json', '').replaceAll('```', '').trim();
-      final parsed = jsonDecode(cleaned) as List;
-      return parsed.cast<String>();
-    } catch (e) {
+      return await _withRetry(() async {
+        final content = slideBytes != null
+            ? Content.multi([TextPart(prompt), DataPart(slideMimeType ?? 'image/jpeg', slideBytes)])
+            : Content.text(prompt);
+        final response = await _visionModel.generateContent([content]);
+        final raw = response.text?.trim() ?? '[]';
+        final cleaned =
+            raw.replaceAll('```json', '').replaceAll('```', '').trim();
+        final parsed = jsonDecode(cleaned) as List;
+        return parsed.cast<String>();
+      });
+    } catch (_) {
       return [
         'Can you tell me which part of the explanation was unclear?',
         'Let\'s recap — what do you understand so far about this topic?',
@@ -129,18 +209,29 @@ Return ONLY a JSON array of 3 strings, nothing else:
   Future<List<Map<String, dynamic>>> clusterAnonymousQuestions(
       List<String> questions) async {
     if (questions.isEmpty) return [];
-    final numbered =
-        questions.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n');
+    final numbered = questions
+        .asMap()
+        .entries
+        .map((e) => '${e.key + 1}. ${e.value}')
+        .join('\n');
     final prompt =
         '''You have ${questions.length} anonymous questions from students in a live lecture:\n$numbered\n\nGroup these into 1-4 themes. For each theme return:\n- "theme": the common confusion (short phrase)\n- "count": number of questions in this theme\n- "sample": the clearest example question\n\nReturn ONLY a JSON array:\n[{"theme":"...","count":2,"sample":"..."}]''';
     try {
-      final response = await _model.generateContent([Content.text(prompt)]);
-      final raw = response.text?.trim() ?? '[]';
-      final cleaned = raw.replaceAll('```json', '').replaceAll('```', '').trim();
-      return (jsonDecode(cleaned) as List).cast<Map<String, dynamic>>();
+      return await _withRetry(() async {
+        final response =
+            await _model.generateContent([Content.text(prompt)]);
+        final raw = response.text?.trim() ?? '[]';
+        final cleaned =
+            raw.replaceAll('```json', '').replaceAll('```', '').trim();
+        return (jsonDecode(cleaned) as List).cast<Map<String, dynamic>>();
+      });
     } catch (_) {
       return [
-        {'theme': 'General questions from students', 'count': questions.length, 'sample': questions.first}
+        {
+          'theme': 'General questions from students',
+          'count': questions.length,
+          'sample': questions.first,
+        }
       ];
     }
   }
@@ -150,25 +241,47 @@ Return ONLY a JSON array of 3 strings, nothing else:
   Future<List<Map<String, String>>> generateReexplanations({
     required String topic,
     String? subject,
+    Uint8List? slideBytes,
+    String? slideMimeType,
   }) async {
     final ctx = subject != null ? '$topic ($subject)' : topic;
     final prompt =
-        '''Students are confused about "$ctx" during a lecture.\n\nGenerate 3 re-explanations, each using a different style:\n1. "analogy" — a familiar real-world analogy\n2. "steps" — numbered step-by-step breakdown\n3. "example" — a concrete specific example\n\nReturn ONLY JSON:\n{"analogy":"...","steps":"...","example":"..."}''';
+        '''Students are confused about "$ctx" during a lecture.${slideBytes != null ? ' The current slide is attached — base your re-explanations on what is shown on it.' : ''}\n\nGenerate 3 re-explanations, each using a different style:\n1. "analogy" — a familiar real-world analogy\n2. "steps" — numbered step-by-step breakdown\n3. "example" — a concrete specific example\n\nReturn ONLY JSON:\n{"analogy":"...","steps":"...","example":"..."}''';
     try {
-      final response = await _model.generateContent([Content.text(prompt)]);
-      final raw = response.text?.trim() ?? '{}';
-      final cleaned = raw.replaceAll('```json', '').replaceAll('```', '').trim();
-      final p = jsonDecode(cleaned) as Map<String, dynamic>;
+      return await _withRetry(() async {
+        final content = slideBytes != null
+            ? Content.multi([TextPart(prompt), DataPart(slideMimeType ?? 'image/jpeg', slideBytes)])
+            : Content.text(prompt);
+        debugPrint('[VoxClass][Gemini] generateReexplanations → calling API (hasSlide=${slideBytes != null})');
+        final response = await _visionModel.generateContent([content]);
+        final raw = response.text?.trim() ?? '{}';
+        debugPrint('[VoxClass][Gemini] raw response: $raw');
+        // Strip markdown fences and extract just the JSON object
+        String cleaned = raw
+            .replaceAll('```json', '')
+            .replaceAll('```', '')
+            .trim();
+        // Find the first { ... } block in case Gemini adds prose around it
+        final start = cleaned.indexOf('{');
+        final end = cleaned.lastIndexOf('}');
+        if (start != -1 && end != -1 && end > start) {
+          cleaned = cleaned.substring(start, end + 1);
+        }
+        debugPrint('[VoxClass][Gemini] cleaned JSON: $cleaned');
+        final p = jsonDecode(cleaned) as Map<String, dynamic>;
+        return [
+          {'type': 'analogy',  'label': 'Analogy',         'text': p['analogy']  as String? ?? ''},
+          {'type': 'steps',    'label': 'Step by Step',    'text': p['steps']    as String? ?? ''},
+          {'type': 'example',  'label': 'Concrete Example','text': p['example']  as String? ?? ''},
+        ];
+      });
+    } catch (e) {
+      debugPrint('[VoxClass][Gemini] generateReexplanations FAILED: $e');
+      final errMsg = 'Error: $e';
       return [
-        {'type': 'analogy', 'label': 'Analogy', 'text': p['analogy'] as String? ?? ''},
-        {'type': 'steps', 'label': 'Step by Step', 'text': p['steps'] as String? ?? ''},
-        {'type': 'example', 'label': 'Concrete Example', 'text': p['example'] as String? ?? ''},
-      ];
-    } catch (_) {
-      return [
-        {'type': 'analogy', 'label': 'Analogy', 'text': 'Think of it like a familiar process — each part connects to something you already know.'},
-        {'type': 'steps', 'label': 'Step by Step', 'text': 'Let\'s break this down one piece at a time, starting from the basics.'},
-        {'type': 'example', 'label': 'Concrete Example', 'text': 'Here\'s a real-world example that illustrates this concept directly.'},
+        {'type': 'analogy',  'label': 'Analogy',         'text': errMsg},
+        {'type': 'steps',    'label': 'Step by Step',    'text': errMsg},
+        {'type': 'example',  'label': 'Concrete Example','text': errMsg},
       ];
     }
   }
@@ -183,8 +296,12 @@ Return ONLY a JSON array of 3 strings, nothing else:
     final prompt =
         "Analyze classroom engagement across ${sessionsData.length} sessions:\n\n${lines.join('\n')}\n\nProvide 2-3 specific, actionable insights for the lecturer. Look for confusion patterns, trends, and what's working. Return ONLY the insight text — no bullet points, no headers, just 2-3 sentences.";
     try {
-      final response = await _model.generateContent([Content.text(prompt)]);
-      return response.text?.trim() ?? 'Run more sessions to generate pattern insights.';
+      return await _withRetry(() async {
+        final response =
+            await _model.generateContent([Content.text(prompt)]);
+        return response.text?.trim() ??
+            'Run more sessions to generate pattern insights.';
+      });
     } catch (_) {
       return 'Analysis unavailable. Ensure your Gemini API key is active.';
     }
@@ -201,7 +318,8 @@ Return ONLY a JSON array of 3 strings, nothing else:
     final total = greenCount + yellowCount + redCount;
     if (total == 0) return 'No reaction data available for this session.';
 
-    final prompt = '''Analyze this classroom engagement data and provide a brief 2-3 sentence insight for the lecturer:
+    final prompt =
+        '''Analyze this classroom engagement data and provide a brief 2-3 sentence insight for the lecturer:
 
 Session: "$sessionTitle"
 Students who understood (🟢): $greenCount
@@ -212,10 +330,37 @@ Total reactions: $total
 Provide actionable, constructive insights. Return ONLY the insight text, no bullet points or headers.''';
 
     try {
-      final response = await _model.generateContent([Content.text(prompt)]);
-      return response.text?.trim() ?? 'Session completed successfully.';
-    } catch (e) {
+      return await _withRetry(() async {
+        final response =
+            await _model.generateContent([Content.text(prompt)]);
+        return response.text?.trim() ?? 'Session completed successfully.';
+      });
+    } catch (_) {
       return 'Session data recorded. Review the reaction breakdown for insights.';
+    }
+  }
+
+  // ─── Question Answer (for students after they respond) ───────────────────
+
+  Future<String> generateQuestionAnswer({
+    required String questionText,
+    required String sessionTitle,
+    String? subject,
+  }) async {
+    final prompt = '''A student was asked this question during a live class session on "$sessionTitle"${subject != null ? ' ($subject)' : ''}:
+
+"$questionText"
+
+Provide a clear, concise correct answer in 2-4 sentences. Make it educational and easy to understand. Return ONLY the answer — no preamble.''';
+
+    try {
+      return await _withRetry(() async {
+        final response = await _model.generateContent([Content.text(prompt)]);
+        return response.text?.trim() ??
+            'Great question! Review your notes or ask your lecturer for the answer.';
+      });
+    } catch (_) {
+      return 'Review your course materials for the answer to this question.';
     }
   }
 }

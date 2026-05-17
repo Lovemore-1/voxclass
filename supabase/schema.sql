@@ -1,162 +1,185 @@
--- ============================================================
--- VoxClass Database Schema
--- Run this in: Supabase Dashboard > SQL Editor > New Query
--- ============================================================
+-- ─────────────────────────────────────────────────────────────────────────────
+-- VoxClass — Supabase Schema
+-- Run this entire file in the Supabase SQL Editor for a fresh project.
+-- ─────────────────────────────────────────────────────────────────────────────
 
--- Enable UUID extension
-create extension if not exists "uuid-ossp";
-
--- ─── Tables ──────────────────────────────────────────────────
-
-create table if not exists profiles (
-  id         uuid references auth.users on delete cascade primary key,
-  full_name  text not null,
-  role       text not null check (role in ('lecturer', 'student')),
-  avatar_url text,
-  created_at timestamptz default now() not null
+-- ── Profiles ──────────────────────────────────────────────────────────────────
+create table if not exists public.profiles (
+  id        uuid primary key references auth.users on delete cascade,
+  full_name text not null,
+  role      text not null check (role in ('lecturer', 'student')),
+  created_at timestamptz default now()
 );
 
-create table if not exists sessions (
-  id          uuid default uuid_generate_v4() primary key,
-  lecturer_id uuid references profiles(id) on delete cascade not null,
-  title       text not null,
-  subject     text,
-  code        char(6) unique not null,
-  status      text not null default 'active' check (status in ('active', 'ended')),
-  created_at  timestamptz default now() not null,
-  ended_at    timestamptz
+-- ── Sessions ──────────────────────────────────────────────────────────────────
+create table if not exists public.sessions (
+  id               uuid primary key default gen_random_uuid(),
+  lecturer_id      uuid references public.profiles(id) on delete cascade,
+  title            text not null,
+  subject          text,
+  code             text not null unique,
+  status           text default 'active' check (status in ('active', 'ended')),
+  current_slide_id uuid,
+  pointer_x        float,
+  pointer_y        float,
+  pointer_visible  boolean default false,
+  created_at       timestamptz default now(),
+  ended_at         timestamptz
 );
 
-create table if not exists reactions (
-  id           uuid default uuid_generate_v4() primary key,
-  session_id   uuid references sessions(id) on delete cascade not null,
-  student_id   uuid references profiles(id) on delete set null,
-  student_name text not null default 'Anonymous',
+-- ── Reactions ─────────────────────────────────────────────────────────────────
+create table if not exists public.reactions (
+  id           uuid primary key default gen_random_uuid(),
+  session_id   uuid references public.sessions(id) on delete cascade,
+  student_id   uuid references auth.users(id) on delete set null,
+  student_name text not null,
   type         text not null check (type in ('green', 'yellow', 'red')),
-  created_at   timestamptz default now() not null
+  created_at   timestamptz default now()
 );
 
-create table if not exists slides (
-  id          uuid default uuid_generate_v4() primary key,
-  session_id  uuid references sessions(id) on delete cascade not null,
-  file_url    text not null,
-  file_name   text not null,
-  order_index int  default 0,
-  created_at  timestamptz default now() not null
+-- ── Slides ────────────────────────────────────────────────────────────────────
+create table if not exists public.slides (
+  id            uuid primary key default gen_random_uuid(),
+  session_id    uuid references public.sessions(id) on delete cascade,
+  file_url      text not null,
+  file_name     text not null,
+  order_index   int default 0,
+  speaker_notes text,
+  created_at    timestamptz default now()
 );
 
-create table if not exists ai_questions (
-  id            uuid default uuid_generate_v4() primary key,
-  session_id    uuid references sessions(id) on delete cascade not null,
-  slide_id      uuid references slides(id) on delete set null,
+-- ── AI Questions ──────────────────────────────────────────────────────────────
+create table if not exists public.ai_questions (
+  id            uuid primary key default gen_random_uuid(),
+  session_id    uuid references public.sessions(id) on delete cascade,
+  slide_id      uuid references public.slides(id) on delete set null,
   question_text text not null,
-  source_type   text not null check (source_type in ('slide', 'confused', 'manual', 'reexplain')),
+  source_type   text not null,
   is_pushed     boolean default false,
-  created_at    timestamptz default now() not null
+  created_at    timestamptz default now()
 );
 
-create table if not exists question_responses (
-  id            uuid default uuid_generate_v4() primary key,
-  question_id   uuid references ai_questions(id) on delete cascade not null,
-  student_id    uuid references profiles(id) on delete set null,
-  student_name  text not null default 'Anonymous',
+-- ── Question Responses ────────────────────────────────────────────────────────
+create table if not exists public.question_responses (
+  id            uuid primary key default gen_random_uuid(),
+  question_id   uuid references public.ai_questions(id) on delete cascade,
+  student_id    uuid references auth.users(id) on delete set null,
+  student_name  text not null,
   response_text text not null,
-  created_at    timestamptz default now() not null
+  created_at    timestamptz default now()
 );
 
-create table if not exists polish_logs (
-  id          uuid default uuid_generate_v4() primary key,
-  user_id     uuid references profiles(id) on delete cascade not null,
-  input_text  text not null,
-  output_text text not null,
-  mode        text not null check (mode in ('soften', 'strengthen', 'academic', 'simplify')),
-  created_at  timestamptz default now() not null
-);
-
-create table if not exists anonymous_questions (
-  id            uuid default uuid_generate_v4() primary key,
-  session_id    uuid references sessions(id) on delete cascade not null,
+-- ── Anonymous Questions ───────────────────────────────────────────────────────
+create table if not exists public.anonymous_questions (
+  id            uuid primary key default gen_random_uuid(),
+  session_id    uuid references public.sessions(id) on delete cascade,
   question_text text not null,
-  created_at    timestamptz default now() not null
+  created_at    timestamptz default now()
 );
 
--- ─── Trigger: auto-create profile on signup ──────────────────
+-- ── Polish Logs ───────────────────────────────────────────────────────────────
+create table if not exists public.polish_logs (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references auth.users(id) on delete set null,
+  input_text  text,
+  output_text text,
+  mode        text,
+  created_at  timestamptz default now()
+);
 
-create or replace function handle_new_user()
-returns trigger as $$
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Row Level Security
+-- ─────────────────────────────────────────────────────────────────────────────
+
+alter table public.profiles            enable row level security;
+alter table public.sessions            enable row level security;
+alter table public.reactions           enable row level security;
+alter table public.slides              enable row level security;
+alter table public.ai_questions        enable row level security;
+alter table public.question_responses  enable row level security;
+alter table public.anonymous_questions enable row level security;
+alter table public.polish_logs         enable row level security;
+
+-- profiles
+create policy "Users manage own profile"
+  on public.profiles for all using (auth.uid() = id);
+
+-- sessions (open read so students can join by code)
+create policy "Anyone can read sessions"
+  on public.sessions for select using (true);
+create policy "Lecturers create sessions"
+  on public.sessions for insert with check (auth.uid() = lecturer_id);
+create policy "Lecturers update own sessions"
+  on public.sessions for update using (auth.uid() = lecturer_id);
+
+-- reactions
+create policy "Anyone can read reactions"
+  on public.reactions for select using (true);
+create policy "Anyone can insert reactions"
+  on public.reactions for insert with check (true);
+
+-- slides
+create policy "Anyone can read slides"
+  on public.slides for select using (true);
+create policy "Anyone can insert slides"
+  on public.slides for insert with check (true);
+create policy "Anyone can update slides"
+  on public.slides for update using (true);
+create policy "Anyone can delete slides"
+  on public.slides for delete using (true);
+
+-- ai_questions
+create policy "Anyone can read questions"
+  on public.ai_questions for select using (true);
+create policy "Anyone can insert questions"
+  on public.ai_questions for insert with check (true);
+create policy "Anyone can update questions"
+  on public.ai_questions for update using (true);
+
+-- question_responses
+create policy "Anyone can read responses"
+  on public.question_responses for select using (true);
+create policy "Anyone can insert responses"
+  on public.question_responses for insert with check (true);
+
+-- anonymous_questions
+create policy "Anyone can read anon questions"
+  on public.anonymous_questions for select using (true);
+create policy "Anyone can insert anon questions"
+  on public.anonymous_questions for insert with check (true);
+
+-- polish_logs
+create policy "Users manage own polish logs"
+  on public.polish_logs for all using (auth.uid() = user_id);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Auto-create profile on signup
+-- ─────────────────────────────────────────────────────────────────────────────
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
 begin
-  insert into profiles (id, full_name, role)
+  insert into public.profiles (id, full_name, role)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'full_name', 'User'),
     coalesce(new.raw_user_meta_data->>'role', 'student')
-  );
+  )
+  on conflict (id) do nothing;
   return new;
 end;
-$$ language plpgsql security definer;
+$$;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
-  for each row execute procedure handle_new_user();
+  for each row execute procedure public.handle_new_user();
 
--- ─── Row Level Security ───────────────────────────────────────
-
-alter table anonymous_questions enable row level security;
-
-alter table profiles          enable row level security;
-alter table sessions          enable row level security;
-alter table reactions         enable row level security;
-alter table slides            enable row level security;
-alter table ai_questions      enable row level security;
-alter table question_responses enable row level security;
-alter table polish_logs       enable row level security;
-
--- Profiles
-create policy "profiles_select" on profiles for select using (true);
-create policy "profiles_update" on profiles for update using (auth.uid() = id);
-
--- Sessions
-create policy "sessions_select" on sessions for select using (true);
-create policy "sessions_insert" on sessions for insert with check (auth.uid() = lecturer_id);
-create policy "sessions_update" on sessions for update using (auth.uid() = lecturer_id);
-
--- Reactions
-create policy "reactions_select" on reactions for select using (true);
-create policy "reactions_insert" on reactions for insert with check (auth.uid() is not null);
-
--- Slides
-create policy "slides_select" on slides for select using (true);
-create policy "slides_insert" on slides for insert with check (
-  auth.uid() = (select lecturer_id from sessions where id = session_id)
-);
-
--- AI Questions
-create policy "questions_select" on ai_questions for select using (true);
-create policy "questions_insert" on ai_questions for insert with check (
-  auth.uid() = (select lecturer_id from sessions where id = session_id)
-);
-create policy "questions_update" on ai_questions for update using (
-  auth.uid() = (select lecturer_id from sessions where id = session_id)
-);
-
--- Question responses
-create policy "responses_select" on question_responses for select using (true);
-create policy "responses_insert" on question_responses for insert with check (auth.uid() is not null);
-
--- Anonymous questions (allow any authenticated user to insert; all can read)
-create policy "anon_questions_select" on anonymous_questions for select using (true);
-create policy "anon_questions_insert" on anonymous_questions for insert with check (true);
-
--- Polish logs
-create policy "polish_select" on polish_logs for select using (auth.uid() = user_id);
-create policy "polish_insert" on polish_logs for insert with check (auth.uid() = user_id);
-
--- ─── Storage bucket ───────────────────────────────────────────
--- Run separately in Supabase Dashboard > Storage > New Bucket
--- Bucket name: slides
--- Public: true
-
--- ─── Enable Realtime ─────────────────────────────────────────
--- Supabase Dashboard > Database > Replication
--- Toggle ON for tables: reactions, ai_questions, slides
+-- ─────────────────────────────────────────────────────────────────────────────
+-- After running this SQL:
+-- 1. Go to Table Editor → reactions / ai_questions / slides / sessions
+--    → enable Realtime on each table
+-- 2. Go to Storage → New bucket → Name: slides → toggle Public ON
+-- ─────────────────────────────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ class SlideModel {
   final String fileName;
   final int orderIndex;
   final DateTime createdAt;
+  final String? speakerNotes;
 
   const SlideModel({
     required this.id,
@@ -13,6 +14,7 @@ class SlideModel {
     required this.fileName,
     required this.orderIndex,
     required this.createdAt,
+    this.speakerNotes,
   });
 
   factory SlideModel.fromJson(Map<String, dynamic> json) => SlideModel(
@@ -22,6 +24,7 @@ class SlideModel {
         fileName: json['file_name'] as String,
         orderIndex: json['order_index'] as int? ?? 0,
         createdAt: DateTime.parse(json['created_at'] as String),
+        speakerNotes: json['speaker_notes'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -31,5 +34,6 @@ class SlideModel {
         'file_name': fileName,
         'order_index': orderIndex,
         'created_at': createdAt.toIso8601String(),
+        'speaker_notes': speakerNotes,
       };
 }

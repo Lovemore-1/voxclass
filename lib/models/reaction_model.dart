@@ -1,6 +1,7 @@
 class ReactionModel {
   final String id;
   final String sessionId;
+  final String? slideId;
   final String? studentId;
   final String studentName;
   final String type;
@@ -9,6 +10,7 @@ class ReactionModel {
   const ReactionModel({
     required this.id,
     required this.sessionId,
+    this.slideId,
     this.studentId,
     required this.studentName,
     required this.type,
@@ -22,6 +24,7 @@ class ReactionModel {
   factory ReactionModel.fromJson(Map<String, dynamic> json) => ReactionModel(
         id: json['id'] as String,
         sessionId: json['session_id'] as String,
+        slideId: json['slide_id'] as String?,
         studentId: json['student_id'] as String?,
         studentName: json['student_name'] as String? ?? 'Anonymous',
         type: json['type'] as String,
@@ -31,6 +34,7 @@ class ReactionModel {
   Map<String, dynamic> toJson() => {
         'id': id,
         'session_id': sessionId,
+        'slide_id': slideId,
         'student_id': studentId,
         'student_name': studentName,
         'type': type,

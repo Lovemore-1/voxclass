@@ -11,6 +11,7 @@ import '../features/dashboard/dashboard_screen.dart';
 import '../features/class_mode/lecturer/create_session_screen.dart';
 import '../features/class_mode/lecturer/live_session_screen.dart';
 import '../features/class_mode/lecturer/session_summary_screen.dart';
+import '../features/class_mode/lecturer/present_screen.dart';
 import '../features/class_mode/student/join_session_screen.dart';
 import '../features/class_mode/student/student_session_screen.dart';
 import '../features/polish_mode/polish_screen.dart';
@@ -71,6 +72,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (_, state) => _slidePage(
           state,
           SessionSummaryScreen(sessionId: state.pathParameters['sessionId']!),
+        ),
+      ),
+      GoRoute(
+        path: '/class/present/:sessionId/:slideId',
+        pageBuilder: (_, state) => _slidePage(
+          state,
+          PresentScreen(
+            sessionId: state.pathParameters['sessionId']!,
+            startSlideId: state.pathParameters['slideId']!,
+          ),
         ),
       ),
       GoRoute(

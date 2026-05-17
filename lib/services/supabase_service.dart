@@ -41,7 +41,24 @@ class SupabaseService {
         .from('profiles')
         .select()
         .eq('id', userId)
-        .single();
+        .maybeSingle();
+    if (data == null) return null;
+    return ProfileModel.fromJson(data);
+  }
+
+  static Future<ProfileModel> ensureProfile({
+    required String userId,
+    required String fullName,
+    required String role,
+  }) async {
+    final existing = await getProfile(userId);
+    if (existing != null) return existing;
+    // Profile missing (trigger didn't run) — create it manually
+    final data = await _client.from('profiles').insert({
+      'id': userId,
+      'full_name': fullName,
+      'role': role,
+    }).select().single();
     return ProfileModel.fromJson(data);
   }
 
@@ -91,6 +108,59 @@ class SupabaseService {
     return SessionModel.fromJson(data);
   }
 
+  // ─── Live Presentation State ─────────────────────────────────────────────
+
+  static Stream<SessionModel?> sessionStateStream(String sessionId) {
+    return _client
+        .from('sessions')
+        .stream(primaryKey: ['id'])
+        .eq('id', sessionId)
+        .map((data) =>
+            data.isEmpty ? null : SessionModel.fromJson(data.first));
+  }
+
+  static Future<void> setCurrentSlide({
+    required String sessionId,
+    String? slideId,
+  }) async {
+    await _client.from('sessions').update({
+      'current_slide_id': slideId,
+      // hide the pointer when we change/clear slide
+      'pointer_visible': false,
+    }).eq('id', sessionId);
+  }
+
+  static Future<void> updateSpeakerNotes({
+    required String slideId,
+    required String notes,
+  }) async {
+    await _client
+        .from('slides')
+        .update({'speaker_notes': notes}).eq('id', slideId);
+  }
+
+  static Future<void> setCurrentPage({
+    required String sessionId,
+    required int page,
+  }) async {
+    await _client.from('sessions').update({
+      'current_page': page,
+    }).eq('id', sessionId);
+  }
+
+  static Future<void> updatePointer({
+    required String sessionId,
+    required double? x,
+    required double? y,
+    required bool visible,
+  }) async {
+    await _client.from('sessions').update({
+      'pointer_x': x,
+      'pointer_y': y,
+      'pointer_visible': visible,
+    }).eq('id', sessionId);
+  }
+
   static Future<List<SessionModel>> getLecturerSessions(String lecturerId) async {
     final data = await _client
         .from('sessions')
@@ -106,11 +176,13 @@ class SupabaseService {
   static Future<void> addReaction({
     required String sessionId,
     required String type,
+    String? slideId,
     String? studentId,
     required String studentName,
   }) async {
     await _client.from('reactions').insert({
       'session_id': sessionId,
+      'slide_id': slideId,
       'student_id': studentId,
       'student_name': studentName,
       'type': type,
@@ -150,6 +222,10 @@ class SupabaseService {
       'order_index': orderIndex,
     }).select().single();
     return SlideModel.fromJson(data);
+  }
+
+  static Future<void> deleteSlide(String slideId) async {
+    await _client.from('slides').delete().eq('id', slideId);
   }
 
   static Future<List<SlideModel>> getSessionSlides(String sessionId) async {
@@ -247,19 +323,22 @@ class SupabaseService {
         .stream(primaryKey: ['id'])
         .eq('session_id', sessionId)
         .order('created_at', ascending: true)
-        .map((data) => data.map(AnonQuestionModel.fromJson).toList());
+        .map((data) => data.map(AnonQuestionModel.fromJson).toList())
+        .handleError((_) => <AnonQuestionModel>[]);
   }
 
   static Future<void> saveAndPushQuestion({
     required String sessionId,
     required String questionText,
     required String sourceType,
+    String? slideId,
   }) async {
     await _client.from('ai_questions').insert({
       'session_id': sessionId,
       'question_text': questionText,
       'source_type': sourceType,
       'is_pushed': true,
+      if (slideId != null) 'slide_id': slideId,
     });
   }
 

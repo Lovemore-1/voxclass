@@ -1,4 +1,6 @@
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,30 +53,39 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
   Future<void> _uploadSlide() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['jpg', 'jpeg', 'png', 'webp'],
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'ppt', 'pptx'],
       withData: true,
+      allowMultiple: true,
     );
     if (result == null || result.files.isEmpty) return;
-    final file = result.files.first;
-    if (file.bytes == null) return;
 
     setState(() => _uploadingSlide = true);
     try {
       final slides = ref.read(slidesStreamProvider(widget.sessionId)).asData?.value ?? [];
-      final url = await StorageService.uploadSlide(
-        sessionId: widget.sessionId,
-        bytes: file.bytes!,
-        fileName: file.name,
-      );
-      await SupabaseService.addSlide(
-        sessionId: widget.sessionId,
-        fileUrl: url,
-        fileName: file.name,
-        orderIndex: slides.length,
-      );
+      int uploadedCount = 0;
+      for (int i = 0; i < result.files.length; i++) {
+        final file = result.files[i];
+        if (file.bytes == null) continue;
+        final url = await StorageService.uploadSlide(
+          sessionId: widget.sessionId,
+          bytes: file.bytes!,
+          fileName: file.name,
+        );
+        await SupabaseService.addSlide(
+          sessionId: widget.sessionId,
+          fileUrl: url,
+          fileName: file.name,
+          orderIndex: slides.length + i,
+        );
+        uploadedCount++;
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Slide uploaded!')),
+          SnackBar(
+            content: Text(
+              '✅ $uploadedCount slide${uploadedCount == 1 ? '' : 's'} uploaded!',
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -88,18 +99,89 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
     }
   }
 
-  Future<void> _generateQuestionsFromSlide(SlideModel slide) async {
+  Future<void> _deleteSlide(SlideModel slide) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text('Remove Slide?',
+            style: GoogleFonts.inter(color: AppColors.textPrimary)),
+        content: Text(
+          'Remove "${slide.fileName}"? This cannot be undone.',
+          style: GoogleFonts.inter(color: AppColors.textMuted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await StorageService.deleteSlide(slide.fileUrl);
+      await SupabaseService.deleteSlide(slide.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('🗑️ Slide removed')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error removing slide: $e')));
+      }
+    }
+  }
+
+  Future<void> _generateQuestionsFromSlide(SlideModel slide,
+      {String? sessionTitle, String? subject}) async {
     setState(() => _generatingQuestions = true);
     try {
-      final bytes = await StorageService.downloadSlide(slide.fileUrl);
-      if (bytes == null) throw Exception('Could not download slide');
-      final questions = await _gemini.generateQuestionsFromImage(bytes);
-      await SupabaseService.saveQuestions(
-        sessionId: widget.sessionId,
-        questions: questions,
-        sourceType: 'slide',
-        slideId: slide.id,
-      );
+      List<String> questions;
+
+      if (StorageService.isAiAnalysable(slide.fileName)) {
+        // Image / PDF — send bytes to Gemini vision
+        final bytes = await StorageService.downloadSlide(slide.fileUrl);
+        if (bytes == null) throw Exception('Could not download slide');
+        final mime = StorageService.mimeTypeFor(slide.fileName);
+        questions =
+            await _gemini.generateQuestionsFromImage(bytes, mimeType: mime);
+      } else {
+        // PPTX / other — text-only fallback using session topic + file name
+        debugPrint(
+            '[VoxClass][AI] ${slide.fileName} is not AI-analysable → text-only fallback');
+        final rawName = slide.fileName
+            .replaceAll(RegExp(r'\.(pptx?|pdf|png|jpe?g|webp)$',
+                caseSensitive: false),
+                '')
+            .replaceAll('_', ' ')
+            .replaceAll('-', ' ');
+        questions = await _gemini.generateQuestionsForTopic(
+          sessionTitle: sessionTitle ?? rawName,
+          subject: subject,
+          context: rawName,
+        );
+      }
+
+      // Save AND immediately push so students see them
+      for (final q in questions) {
+        await SupabaseService.saveAndPushQuestion(
+          sessionId: widget.sessionId,
+          questionText: q,
+          sourceType: 'slide',
+          slideId: slide.id,
+        );
+      }
       _tabs.animateTo(2);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -118,7 +200,8 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
   }
 
   Future<void> _generateClarifyingQuestions(
-      List<ReactionModel> reactions, String sessionTitle, String? subject) async {
+      List<ReactionModel> reactions, String sessionTitle, String? subject,
+      {SlideModel? currentSlide}) async {
     final red = reactions.where((r) => r.isRed).length;
     if (red == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -128,17 +211,34 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
     }
     setState(() => _generatingClarifying = true);
     try {
+      // Download current slide bytes for AI context if available
+      Uint8List? slideBytes;
+      String? slideMimeType;
+      if (currentSlide != null && StorageService.isAiAnalysable(currentSlide.fileName)) {
+        debugPrint('[VoxClass][AI] Downloading current slide for clarifying questions: ${currentSlide.fileName}');
+        slideBytes = await StorageService.downloadSlide(currentSlide.fileUrl);
+        slideMimeType = StorageService.mimeTypeFor(currentSlide.fileName);
+        debugPrint('[VoxClass][AI] Clarifying prompt → slide=${currentSlide.fileName} mimeType=$slideMimeType confusedCount=$red');
+      } else {
+        debugPrint('[VoxClass][AI] Clarifying prompt → no slide (text-only) confusedCount=$red topic=$sessionTitle');
+      }
       final questions = await _gemini.generateClarifyingQuestions(
         sessionTitle: sessionTitle,
         subject: subject,
         confusedCount: red,
         totalStudents: reactions.length,
+        slideBytes: slideBytes,
+        slideMimeType: slideMimeType,
       );
-      await SupabaseService.saveQuestions(
-        sessionId: widget.sessionId,
-        questions: questions,
-        sourceType: 'confused',
-      );
+      // Save AND push immediately so students see them right away
+      for (final q in questions) {
+        await SupabaseService.saveAndPushQuestion(
+          sessionId: widget.sessionId,
+          questionText: q,
+          sourceType: 'confused',
+          slideId: currentSlide?.id,
+        );
+      }
       _tabs.animateTo(2);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -154,10 +254,23 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
     }
   }
 
-  Future<void> _generateReexplanations(String topic, String? subject) async {
+  Future<void> _generateReexplanations(String topic, String? subject,
+      {SlideModel? currentSlide}) async {
     setState(() => _generatingReexplain = true);
     try {
-      final options = await _gemini.generateReexplanations(topic: topic, subject: subject);
+      Uint8List? slideBytes;
+      String? slideMimeType;
+      if (currentSlide != null && StorageService.isAiAnalysable(currentSlide.fileName)) {
+        debugPrint('[VoxClass][AI] Downloading slide for re-explanation: ${currentSlide.fileName}');
+        slideBytes = await StorageService.downloadSlide(currentSlide.fileUrl);
+        slideMimeType = StorageService.mimeTypeFor(currentSlide.fileName);
+        debugPrint('[VoxClass][AI] Re-explain prompt → slide=${currentSlide.fileName} topic=$topic');
+      } else {
+        debugPrint('[VoxClass][AI] Re-explain prompt → no slide (text-only) topic=$topic');
+      }
+      final options = await _gemini.generateReexplanations(
+          topic: topic, subject: subject,
+          slideBytes: slideBytes, slideMimeType: slideMimeType);
       if (!mounted) return;
       setState(() => _generatingReexplain = false);
       await showModalBottomSheet(
@@ -174,6 +287,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
               sessionId: widget.sessionId,
               questionText: text,
               sourceType: 'reexplain',
+              slideId: currentSlide?.id,  // tie to current slide
             );
             if (mounted) {
               _tabs.animateTo(2);
@@ -244,6 +358,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
   @override
   Widget build(BuildContext context) {
     final sessionAsync = ref.watch(sessionProvider(widget.sessionId));
+    final liveSessionAsync = ref.watch(sessionStateStreamProvider(widget.sessionId));
     final reactionsAsync = ref.watch(reactionsStreamProvider(widget.sessionId));
     final slidesAsync = ref.watch(slidesStreamProvider(widget.sessionId));
     final questionsAsync = ref.watch(questionsStreamProvider(widget.sessionId));
@@ -254,9 +369,23 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
         body: Center(child: CircularProgressIndicator(color: AppColors.lime)),
       ),
       error: (_, __) => const Scaffold(body: Center(child: Text('Session not found'))),
-      data: (session) {
+      data: (initialSession) {
+        final session = liveSessionAsync.asData?.value ?? initialSession;
         if (session == null) return const Scaffold(body: Center(child: Text('Not found')));
-        final reactions = reactionsAsync.asData?.value ?? [];
+        final allReactions = reactionsAsync.asData?.value ?? [];
+        final allSlides = slidesAsync.asData?.value ?? [];
+        // Show only reactions for the CURRENT slide; fall back to all if no slide active
+        final reactions = session.currentSlideId != null
+            ? allReactions.where((r) => r.slideId == session.currentSlideId).toList()
+            : allReactions;
+        // Find the current active slide (for AI context)
+        SlideModel? currentSlide;
+        if (session.currentSlideId != null) {
+          for (final s in allSlides) {
+            if (s.id == session.currentSlideId) { currentSlide = s; break; }
+          }
+        }
+        debugPrint('[VoxClass][Lecturer] Build → currentSlideId=${session.currentSlideId} reactions=${reactions.length} slides=${allSlides.length}');
         final green = reactions.where((r) => r.isGreen).length;
         final yellow = reactions.where((r) => r.isYellow).length;
         final red = reactions.where((r) => r.isRed).length;
@@ -268,7 +397,11 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
             backgroundColor: Colors.transparent,
             appBar: AppBar(
               backgroundColor: Colors.transparent,
-              leading: const BackButton(),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () =>
+                    context.canPop() ? context.pop() : context.go('/dashboard'),
+              ),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -328,7 +461,11 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
                 uploading: _uploadingSlide,
                 generating: _generatingQuestions,
                 onUpload: _uploadSlide,
-                onGenerateQuestions: _generateQuestionsFromSlide,
+                onGenerateQuestions: (slide) => _generateQuestionsFromSlide(
+                    slide,
+                    sessionTitle: session.title,
+                    subject: session.subject),
+                onDelete: _deleteSlide,
               ),
               // ── Tab 3: Questions ─────────────────────────────────────
               _QuestionsTab(questionsAsync: questionsAsync),
@@ -338,10 +475,12 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
                 redCount: red,
                 generating: _generatingClarifying,
                 onGenerate: () => _generateClarifyingQuestions(
-                    reactions, session.title, session.subject),
+                    reactions, session.title, session.subject,
+                    currentSlide: currentSlide),
                 generatingReexplain: _generatingReexplain,
                 onReexplain: () =>
-                    _generateReexplanations(session.title, session.subject),
+                    _generateReexplanations(session.title, session.subject,
+                    currentSlide: currentSlide),
                 anonQuestions: anonQuestions,
                 clusteringAnon: _clusteringAnon,
                 anonClusters: _anonClusters,
@@ -519,11 +658,12 @@ class _SlidesTab extends StatelessWidget {
   final bool generating;
   final VoidCallback onUpload;
   final void Function(SlideModel) onGenerateQuestions;
+  final void Function(SlideModel) onDelete;
 
   const _SlidesTab({
     required this.slidesAsync, required this.uploading,
     required this.generating, required this.onUpload,
-    required this.onGenerateQuestions,
+    required this.onGenerateQuestions, required this.onDelete,
   });
 
   @override
@@ -543,7 +683,7 @@ class _SlidesTab extends StatelessWidget {
                       height: 16, width: 16,
                       child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.upload_file_outlined),
-              label: Text(uploading ? 'Uploading...' : 'Upload Slide (JPG/PNG)'),
+              label: Text(uploading ? 'Uploading...' : 'Upload Slides (JPG / PNG / PDF / PPTX)'),
             ),
           ),
           const SizedBox(height: 20),
@@ -567,6 +707,7 @@ class _SlidesTab extends StatelessWidget {
                   slide: slide,
                   generating: generating,
                   onGenerate: () => onGenerateQuestions(slide),
+                  onDelete: () => onDelete(slide),
                 )),
         ],
       ),
@@ -578,8 +719,14 @@ class _SlideCard extends StatelessWidget {
   final SlideModel slide;
   final bool generating;
   final VoidCallback onGenerate;
+  final VoidCallback onDelete;
 
-  const _SlideCard({required this.slide, required this.generating, required this.onGenerate});
+  const _SlideCard({
+    required this.slide,
+    required this.generating,
+    required this.onGenerate,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -593,44 +740,83 @@ class _SlideCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
-            child: Image.network(
-              slide.fileUrl,
-              height: 180,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                height: 180,
-                color: AppColors.border,
-                child: const Center(
-                    child: Icon(Icons.image_outlined, color: AppColors.textMuted)),
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(13)),
+                child: _SlideThumbnail(slide: slide),
               ),
-            ),
+              // ── Delete button ─────────────────────────────────────────
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Material(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(8),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: onDelete,
+                    child: const Padding(
+                      padding: EdgeInsets.all(6),
+                      child: Icon(Icons.delete_outline_rounded,
+                          size: 18, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           Padding(
             padding: const EdgeInsets.all(12),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(slide.fileName,
-                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
-                      overflow: TextOverflow.ellipsis),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: generating ? null : onGenerate,
-                  icon: generating
-                      ? const SizedBox(
-                          height: 14, width: 14,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: AppColors.darkBg))
-                      : const Icon(Icons.auto_awesome_outlined, size: 14),
-                  label: Text(generating ? 'Generating...' : 'Ask Gemini',
-                      style: const TextStyle(fontSize: 12)),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
+                Text(slide.fileName,
+                    style: GoogleFonts.inter(
+                        fontSize: 12, color: AppColors.textMuted),
+                    overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => context.push(
+                            '/class/present/${slide.sessionId}/${slide.id}'),
+                        icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                        label: const Text('Present',
+                            style: TextStyle(fontSize: 12)),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          backgroundColor: AppColors.indigo,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: generating ? null : onGenerate,
+                        icon: generating
+                            ? const SizedBox(
+                                height: 14,
+                                width: 14,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.textSecondary))
+                            : const Icon(Icons.auto_awesome_outlined, size: 14),
+                        label: Text(generating ? 'Generating…' : 'Ask Gemini',
+                            style: const TextStyle(fontSize: 12)),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          side: const BorderSide(color: AppColors.border),
+                          foregroundColor: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -638,6 +824,71 @@ class _SlideCard extends StatelessWidget {
         ],
       ),
     ).animate().fadeIn().slideY(begin: 0.2);
+  }
+}
+
+class _SlideThumbnail extends StatelessWidget {
+  final SlideModel slide;
+  const _SlideThumbnail({required this.slide});
+
+  @override
+  Widget build(BuildContext context) {
+    final ext = slide.fileName.split('.').last.toLowerCase();
+    final isImage = const {'png', 'jpg', 'jpeg', 'webp'}.contains(ext);
+
+    if (isImage) {
+      return Image.network(
+        slide.fileUrl,
+        height: 180,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _fileBadge(ext),
+      );
+    }
+    return _fileBadge(ext);
+  }
+
+  Widget _fileBadge(String ext) {
+    IconData icon;
+    Color tint;
+    String label;
+    switch (ext) {
+      case 'pdf':
+        icon = Icons.picture_as_pdf_outlined;
+        tint = const Color(0xFFEF4444);
+        label = 'PDF';
+        break;
+      case 'ppt':
+      case 'pptx':
+        icon = Icons.slideshow_outlined;
+        tint = const Color(0xFFF59E0B);
+        label = 'PowerPoint';
+        break;
+      default:
+        icon = Icons.insert_drive_file_outlined;
+        tint = AppColors.textMuted;
+        label = ext.toUpperCase();
+    }
+    return Container(
+      height: 180,
+      width: double.infinity,
+      color: AppColors.border,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 44, color: tint),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: tint,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

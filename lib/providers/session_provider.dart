@@ -51,6 +51,13 @@ final sessionProvider =
   return SupabaseService.getSession(sessionId);
 });
 
+// Live session state — emits whenever the sessions row changes
+// (current_slide_id, pointer_x, pointer_y, pointer_visible, status, etc.)
+final sessionStateStreamProvider =
+    StreamProvider.family<SessionModel?, String>((ref, sessionId) {
+  return SupabaseService.sessionStateStream(sessionId);
+});
+
 // Helper: compute reaction counts from a list
 ({int green, int yellow, int red, int total}) computeReactionCounts(
     List<ReactionModel> reactions) {

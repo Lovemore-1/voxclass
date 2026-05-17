@@ -1,0 +1,47 @@
+1
+00:00:00,000 --> 00:00:04,500
+VoxClass — Real-Time AI Teaching Co-pilot
+
+2
+00:00:04,500 --> 00:00:10,000
+Lecturers can't tell who's lost. VoxClass fixes that.
+
+3
+00:00:10,000 --> 00:00:22,000
+Both the lecturer and student sign in simultaneously
+
+4
+00:00:22,000 --> 00:00:36,000
+Session created — students join with a 6-digit code or QR scan
+
+5
+00:00:36,000 --> 00:00:52,000
+Lecturer uploads a real APU lecture PPTX — 32 slides
+
+6
+00:00:52,000 --> 00:01:05,000
+LIVE: Both screens sync automatically as the lecturer navigates
+
+7
+00:01:05,000 --> 00:01:30,000
+Student signals CONFUSED — the lecturer sees it the moment it's tapped
+
+8
+00:01:30,000 --> 00:01:50,000
+"1 student confused (33%)" — confusion alert fires on the lecturer screen
+
+9
+00:01:50,000 --> 00:02:15,000
+Signals tab: Generate Clarifying Questions or Re-explain This Topic with AI
+
+10
+00:02:15,000 --> 00:02:48,000
+AI-generated questions pushed live — student sees them instantly on their screen
+
+11
+00:02:48,000 --> 00:03:07,000
+Student can tap "See AI Answer" or type their own response
+
+12
+00:03:07,000 --> 00:03:27,500
+VoxClass — built in one week for Shortcut Asia Internship Challenge 2026

@@ -75,13 +75,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'VoxClass',
-                      style: GoogleFonts.inter(
-                        color: AppColors.lime,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.5,
+                    Image.asset(
+                      'assets/images/logo_wordmark.png',
+                      height: 28,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Text(
+                        'VoxClass',
+                        style: GoogleFonts.inter(
+                          color: AppColors.lime,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.5,
+                        ),
                       ),
                     ),
                     TextButton(

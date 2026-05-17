@@ -39,6 +39,12 @@ dependencies:
   image_picker: ^1.1.2
   path_provider: ^2.1.5
 
+  # Prevents web iframes from stealing pointer events (needed for modals over PDF.js)
+  pointer_interceptor: ^0.9.3+4
+
+  # HTTP client for downloading slide bytes to pass to Gemini
+  http: ^1.2.0
+
   # Utils
   shared_preferences: ^2.3.4
   flutter_dotenv: ^5.2.1
