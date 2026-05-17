@@ -50,3 +50,4 @@ app.*.map.json
 
 # Claude settings
 .claude/
+vox class.mp4
