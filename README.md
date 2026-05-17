@@ -200,7 +200,7 @@ Create a `.env` file in the project root with these pre-configured keys:
 ```
 SUPABASE_URL=https://jntgzjvguzoomhsrzwcs.supabase.co
 SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpudGd6anZndXpvb21oc3J6d2NzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NDk0NjMsImV4cCI6MjA5NDMyNTQ2M30.FRuNhF7uwfo30CdGh-jVSq2RT-wt-D-imBKYmNoZz3M
-GEMINI_API_KEY=AIzaSyCUcXRV4mUxEMFO7rPvmxfgLRBg4PKPWhI
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 The backend is live and fully configured — just paste the keys and run.
