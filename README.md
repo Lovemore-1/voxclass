@@ -193,17 +193,17 @@ cp .env.example .env
 flutter run -d chrome
 ```
 
-### Demo credentials (no account setup needed)
+### Environment variables
 
-Create a `.env` file in the project root with these pre-configured keys:
+Create a `.env` file in the project root with your own keys (see Setup below):
 
 ```
-SUPABASE_URL=https://jntgzjvguzoomhsrzwcs.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpudGd6anZndXpvb21oc3J6d2NzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NDk0NjMsImV4cCI6MjA5NDMyNTQ2M30.FRuNhF7uwfo30CdGh-jVSq2RT-wt-D-imBKYmNoZz3M
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-The backend is live and fully configured — just paste the keys and run.
+Fill in your own Supabase and Gemini keys (see Setup below).
 
 ### Test the full flow (two browser windows)
 
@@ -227,7 +227,7 @@ Follow these steps only if you want to run VoxClass against your own Supabase pr
 
 ```
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=eyJ...
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
 GEMINI_API_KEY=AIza...
 ```
 
