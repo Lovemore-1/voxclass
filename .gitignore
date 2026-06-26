@@ -51,3 +51,7 @@ app.*.map.json
 # Claude settings
 .claude/
 vox class.mp4
+
+# Office / LibreOffice lock & temp files
+.~lock.*#
+~$*
