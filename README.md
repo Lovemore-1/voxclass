@@ -1,126 +1,34 @@
 <p align="center">
-  <img src="assets/images/logo_wordmark.png" alt="VoxClass" width="320">
+  <img src="assets/images/logo_wordmark.png" alt="VoxClass" width="360">
 </p>
 
-# VoxClass — Give Your Class a Voice
-
-> **Shortcut Asia Internship Challenge 2026** · Real-time AI teaching co-pilot
-> *"Go deeper, not broader"*
+# VoxClass — Real-Time AI Teaching Co-Pilot
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)
 ![Gemini](https://img.shields.io/badge/Gemini-1.5_Flash-4285F4?logo=google)
 ![Supabase](https://img.shields.io/badge/Supabase-Realtime-3ECF8E?logo=supabase)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
----
+Built for the **Shortcut Asia Internship Challenge 2026** — delivered as a working full-stack prototype in one week.
 
-## The Problem
+## The problem
 
-Every lecturer has had this moment: you finish explaining a concept, ask "any questions?" — silence. Then the exam results come back and half the class didn't understand it. Silence isn't understanding. It's disengagement.
+A lecturer finishes explaining a concept and asks "any questions?" — silence. The exam results later show half the class didn't understand. Silence isn't understanding; it's disengagement that stays invisible until it's too late to fix.
 
-**VoxClass makes the invisible visible.** Students react in real time. The lecturer sees confusion the moment it happens — not a week later.
+VoxClass surfaces that signal live. Students react in real time, and the lecturer sees confusion the moment it happens — in a 30-student class, a confusion spike is visible in under 3 seconds.
 
----
+## What it does
 
-## What It Does
-
-VoxClass closes the feedback loop between lecturers and students during live sessions. A lecturer starts a session, students join with a 6-digit code, and the app continuously surfaces how the room is feeling — so no student gets left behind silently.
-
-> **In a 30-student class, VoxClass surfaces confusion in under 3 seconds.**
+A lecturer starts a session; students join with a 6-digit code or QR — no student accounts needed.
 
 | Role | What they get |
-|------|---------------|
-| **Lecturer** | Live mood meter, confused-student alerts → Gemini clarifying questions, slide upload → AI quiz questions, session summary with AI insights, Polish Mode for feedback |
-| **Student** | One-tap reactions (got it / unsure / confused), shared slide viewer, anonymous questions, live AI-generated quiz questions |
+|---|---|
+| **Lecturer** | Live mood meter, confused-student alerts, AI clarifying questions, slide upload → AI quiz generation, post-session AI insights |
+| **Student** | One-tap reactions (got it / unsure / confused), live shared slide viewer, anonymous questions, pushed quiz questions |
 
----
+The features chain rather than stand alone: a spike in 🔴 reactions triggers the confused panel → one tap generates targeted clarifying questions from the current slide via Gemini → the lecturer pushes the best one to every student instantly → the post-session summary explains *why* that topic caused confusion.
 
-## Key Features
-
-### 🎭 Class Mode — Live Session
-
-**Live mood meter** — Real-time donut chart (🟢 / 🟡 / 🔴) powered by Supabase Realtime. Updates in under 3 seconds of a student reacting.
-
-**Session codes** — Shareable 6-digit code + QR for instant student join. No accounts needed for students.
-
-**Slide sharing** — Lecturer uploads slides (JPG, PNG, PDF, PPTX). Students see them live. Multiple files in one upload.
-
-**AI quiz questions** — Upload a slide → Gemini Vision analyses the content → 3 curriculum-aligned questions generated instantly.
-
-**Confused panel** — When 🔴 reactions spike, one tap generates 3 targeted clarifying questions via Gemini. Push the best one to all students.
-
-**Re-explain** — Gemini generates 3 different explanations of the topic (analogy / step-by-step / concrete example). Lecturer picks one and pushes it live.
-
-**Anonymous questions** — Students submit questions without their name. Gemini clusters them by theme so the lecturer sees patterns, not noise.
-
-**Full presenter view** — Slide fills the screen. Live mood HUD overlays the corner. Confused-student alert banner fires automatically.
-
-### ✍️ Polish Mode
-
-Rewrite any text in 4 styles powered by Gemini 1.5 Flash:
-
-| Mode | What it does |
-|------|-------------|
-| **Soften** | Warmer, more empathetic feedback tone |
-| **Strengthen** | More assertive, structured arguments |
-| **Academic** | Formal scholarly language |
-| **Simplify** | Plain language, no jargon |
-
-Word-level diff shows exactly what changed (added vs removed).
-
-### 🔐 Auth & Onboarding
-
-Email/password signup with role picker (Lecturer / Student). Animated 3-slide onboarding. Session-persistent auth via Supabase.
-
----
-
-## Why This Wins on "Go Deeper, Not Broader"
-
-The features don't stand alone — each one feeds the next:
-
-1. **Student reacts 🔴** → mood meter spikes
-2. **Lecturer sees spike** → taps "Generate Clarifying Questions"
-3. **Gemini uses session context** → generates targeted questions, not generic ones
-4. **Lecturer pushes best question** → all students see it instantly
-5. **Session ends** → AI summary explains *why* this topic caused confusion
-
-The mood meter isn't decorative — it directly triggers AI question generation.  
-Slide upload isn't file storage — it feeds Gemini Vision to generate curriculum-aligned questions.  
-Polish Mode isn't a text editor — it gives voice to students and lecturers who struggle to express themselves clearly.
-
----
-
-## Screenshots
-
-> Run `flutter run -d chrome` to see the full UI in action.
-
-**Key screens:**
-- **Onboarding** — animated emoji slides introducing the product
-- **Dashboard** — role-branched home with session history and teaching pattern insights
-- **Live Session** — 4 tabs: Mood / Slides / Questions / Signals
-- **Presenter View** — fullscreen slide + live mood HUD + confused-student alert
-- **Student View** — reaction buttons + slide viewer + question cards
-- **Session Summary** — post-session stats + Gemini AI insights
-- **Polish Mode** — before/after diff with word-level highlighting
-
-*Add screenshots here before submitting — the live mood donut updating in real time is your killer visual.*
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Framework** | Flutter 3.x (Dart) — Android, iOS, Windows, macOS, Linux, Web |
-| **AI** | Google Gemini 1.5 Flash (text + vision multimodal) |
-| **Backend** | Supabase (Auth + PostgreSQL + Realtime + Storage) |
-| **State** | Riverpod 2.x (StreamProvider, FutureProvider) |
-| **Navigation** | go_router 14.x with auth redirect |
-| **Charts** | fl_chart (animated PieChart) |
-| **QR** | qr_flutter |
-| **Animations** | flutter_animate |
-
----
+Other capabilities: PowerPoint-style slide sharing (JPG/PNG/PDF/PPTX) with per-page sync broadcast to all students, anonymous question clustering by theme, and **Polish Mode** — Gemini-powered rewriting of feedback text in four tones (soften / strengthen / academic / simplify) with word-level diff.
 
 ## Architecture
 
@@ -131,140 +39,89 @@ lib/
 ├── core/
 │   ├── constants.dart           # .env key accessors
 │   ├── router.dart              # go_router + auth redirect notifier
-│   └── theme/                   # Dark theme (indigo/purple palette)
-├── models/                      # ProfileModel, SessionModel, ReactionModel,
-│                                #   SlideModel, QuestionModel, AnonQuestionModel
-├── providers/                   # Riverpod: authStateProvider,
-│                                #   reactionsStreamProvider, slidesStreamProvider…
+│   └── theme/                   # Dark theme
+├── models/                      # Profile, Session, Reaction, Slide, Question…
+├── providers/                   # Riverpod: auth state, realtime streams
 ├── services/
 │   ├── supabase_service.dart    # All DB + auth operations
-│   ├── gemini_service.dart      # AI: polish, slide questions, clarifying
-│   │                            #   questions, insights — with retry logic
-│   └── storage_service.dart    # Supabase Storage slide upload/download
+│   ├── gemini_service.dart      # AI calls with retry + fallback defaults
+│   └── storage_service.dart     # Slide upload/download (Supabase Storage)
 └── features/
-    ├── onboarding/
-    ├── auth/                    # Login + Signup
-    ├── dashboard/               # Role-branched home screen
-    ├── class_mode/
-    │   ├── lecturer/            # Create session, live session (4 tabs),
-    │   │                        #   presenter view, session summary
-    │   ├── student/             # Join session, student session view
-    │   └── widgets/             # MoodDonutChart, QrDisplayWidget,
-    │                            #   ReactionButton, QuestionCard, FileViewer
-    └── polish_mode/             # Text rewriting with diff view
+    ├── auth/  ├── dashboard/  ├── onboarding/
+    ├── class_mode/              # lecturer/, student/, shared widgets
+    └── polish_mode/
 ```
 
----
+Design decisions worth noting:
 
-## Database Schema
+- **Realtime over polling.** Reactions, pushed questions, and slide changes ride Supabase Realtime (Postgres logical replication → websockets), so the mood meter and student slide viewers update without any refresh loop.
+- **Feature-first structure.** Code is organized by feature (`class_mode`, `polish_mode`) rather than by layer, keeping each user flow self-contained.
+- **Resilient AI calls.** Every Gemini call retries with exponential backoff (3 attempts) and parses structured JSON with safe fallbacks, so a flaky or malformed model response degrades gracefully instead of crashing a live class.
+- **Row Level Security on every table**; Realtime enabled only where the UI needs it (`reactions`, `ai_questions`, `slides`, `sessions`).
+
+## Database schema
 
 ```
-profiles          — user id, full_name, role (lecturer/student)
-sessions          — id, lecturer_id, title, subject, code, status, ended_at
-reactions         — session_id, student_id, student_name, type (green/yellow/red)
-slides            — session_id, file_url, file_name, order_index, speaker_notes
-ai_questions      — session_id, slide_id, question_text, source_type, is_pushed
-question_responses — question_id, student_id, student_name, response_text
-polish_logs       — user_id, input_text, output_text, mode
+profiles            user id, full_name, role (lecturer/student)
+sessions            lecturer_id, title, subject, code, status
+reactions           session_id, student_id, type (green/yellow/red)
+slides              session_id, file_url, order_index, speaker_notes
+ai_questions        session_id, slide_id, question_text, is_pushed
+question_responses  question_id, student_id, response_text
+polish_logs         user_id, input_text, output_text, mode
 ```
 
-Row Level Security enabled on all tables.  
-Realtime enabled on `reactions`, `ai_questions`, and `slides`.
+Full schema with RLS policies: [`supabase/schema.sql`](supabase/schema.sql).
 
----
+## Tech stack
 
-## Quick Start
+| Layer | Technology |
+|---|---|
+| Framework | Flutter 3.x (Android, iOS, desktop, Web) |
+| AI | Google Gemini 1.5 Flash — text + vision multimodal |
+| Backend | Supabase (Auth, PostgreSQL, Realtime, Storage) |
+| State | Riverpod 2.x |
+| Navigation | go_router 14.x with auth redirect |
+| Charts / QR / Motion | fl_chart · qr_flutter · flutter_animate |
 
-**Prerequisites:** [Flutter SDK 3.x](https://docs.flutter.dev/get-started/install)
+## Setup
+
+Prerequisites: [Flutter SDK 3.x](https://docs.flutter.dev/get-started/install), a free [Supabase](https://supabase.com) project, a free [Gemini API key](https://aistudio.google.com/apikey).
 
 ```bash
-# 1. Clone
 git clone https://github.com/Lovemore-1/voxclass.git
 cd voxclass
-
-# 2. Install dependencies
 flutter pub get
-
-# 3. Create .env with the demo credentials below
-cp .env.example .env
-# (then paste the demo credentials — see next section)
-
-# 4. Run
+cp .env.example .env     # fill in your own keys — see below
 flutter run -d chrome
 ```
 
-### Environment variables
-
-Create a `.env` file in the project root with your own keys (see Setup below):
+`.env`:
 
 ```
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your_supabase_anon_key_here
-GEMINI_API_KEY=your_gemini_api_key_here
+SUPABASE_ANON_KEY=your_anon_key
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
-Fill in your own Supabase and Gemini keys (see Setup below).
+Supabase setup:
 
-### Test the full flow (two browser windows)
+1. Run the contents of `supabase/schema.sql` in the SQL Editor.
+2. Enable Realtime on `reactions`, `ai_questions`, `slides`, `sessions`.
+3. Create a public Storage bucket named `slides`.
 
-1. Run `flutter run -d chrome` — sign up as **Lecturer** → **Start Class** → copy the 6-digit code
-2. Open an **incognito window** at the same localhost URL → sign up as **Student** → **Join Session** with the code
-3. Student sends reactions → Lecturer sees the live mood meter update in real time
-4. Upload an image slide → tap **Ask Gemini** → 3 quiz questions generated instantly
+### Try the full loop (two browser windows)
 
----
+1. `flutter run -d chrome` → sign up as **Lecturer** → **Start Class** → copy the 6-digit code.
+2. Incognito window, same URL → sign up as **Student** → join with the code.
+3. Send reactions as the student and watch the lecturer's mood meter move in real time.
+4. Upload an image slide → **Ask Gemini** → three quiz questions generated from the slide content.
 
-## Setup (own instance)
+## Future improvements
 
-Follow these steps only if you want to run VoxClass against your own Supabase project.
-
-### 1. Prerequisites
-- Flutter SDK 3.x
-- A [Supabase](https://supabase.com) project (free tier works)
-- A [Gemini API key](https://aistudio.google.com/apikey) (free)
-
-### 2. Configure environment
-
-```
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your_supabase_anon_key_here
-GEMINI_API_KEY=AIza...
-```
-
-### 3. Set up Supabase
-
-1. Create a new Supabase project
-2. Open the **SQL Editor** and paste + run the entire contents of `supabase/schema.sql`
-3. Go to **Table Editor → reactions → Realtime** → enable. Repeat for `ai_questions`, `slides`, `sessions`
-4. Go to **Storage → New bucket** → name it `slides` → toggle **Public** ON
-
-### 4. Run
-
-```bash
-flutter run -d chrome      # Web (recommended)
-flutter run -d windows     # Windows desktop
-flutter run -d android     # Android device
-```
-
----
-
-## Gemini Integration
-
-```dart
-// Slide → quiz questions (multimodal vision)
-final content = Content.multi([
-  TextPart(prompt),
-  DataPart('image/jpeg', imageBytes),
-]);
-final response = await model.generateContent([content]);
-
-// All Gemini calls include automatic retry (3 attempts, exponential backoff)
-// with safe fallback defaults if the API is unavailable
-```
-
-All Gemini calls return structured JSON parsed with fallback to sensible defaults if the model output is malformed or the API is temporarily unavailable.
-
----
+- Replace per-reaction rows with windowed aggregation for very large classes.
+- Speech-to-text capture of the lecture audio to give Gemini richer context than the slide alone.
+- LMS integration (Moodle/Canvas) for session rosters and grade export.
 
 ## License
 
